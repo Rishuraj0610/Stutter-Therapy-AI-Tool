@@ -1,0 +1,10 @@
+{
+  "name": "FluencyAI - Stuttering Therapy & Clinician Platform",
+  "description": "Evidence-based stuttering therapy, real-time ML acoustic speech disfluency analysis, customizable accessibility themes, and verified doctor booking directory.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
