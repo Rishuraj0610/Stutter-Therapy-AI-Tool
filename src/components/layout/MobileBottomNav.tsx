@@ -1,15 +1,15 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Home, Mic, MessageSquareHeart, TrendingUp, User } from 'lucide-react';
+import { Home, CalendarCheck, Mic, MessageSquareHeart, User } from 'lucide-react';
 
 export const MobileBottomNav: React.FC = () => {
   const { currentPage, setCurrentPage } = useAuth();
 
   const navItems = [
     { id: 'dashboard', label: 'Home', icon: Home },
+    { id: 'daily_plan', label: 'Daily Plan', icon: CalendarCheck },
     { id: 'speech_practice', label: 'Practice', icon: Mic },
     { id: 'ai_counselling', label: 'Counsellor', icon: MessageSquareHeart },
-    { id: 'progress', label: 'Progress', icon: TrendingUp },
     { id: 'profile', label: 'Profile', icon: User }
   ];
 

@@ -15,13 +15,29 @@ import { ProfilePage } from './pages/ProfilePage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { AboutPage } from './pages/AboutPage';
 import { AuthPages } from './pages/AuthPages';
-import { ThemeSelectorModal } from './components/common/ThemeSelectorModal';
 import { MobileBottomNav } from './components/layout/MobileBottomNav';
+import { ChevronsRight } from 'lucide-react';
 
 const AppContent: React.FC = () => {
   const { currentPage, isAuthenticated, user } = useAuth();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('fluency_sidebar_open');
+      if (saved !== null) return saved === 'true';
+      return window.innerWidth >= 1024;
+    }
+    return true;
+  });
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('fluency_sidebar_open', String(next));
+      } catch (e) {}
+      return next;
+    });
+  };
 
   const renderCurrentPage = () => {
     switch (currentPage) {
@@ -63,11 +79,23 @@ const AppContent: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors">
       <Navbar
-        onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+        onToggleSidebar={toggleSidebar}
         isSidebarOpen={isSidebarOpen}
       />
 
       <div className="flex flex-1 w-full relative">
+        {/* Floating Desktop Unhide Sidebar Tab */}
+        {showSidebar && !isSidebarOpen && (
+          <button
+            onClick={toggleSidebar}
+            className="hidden lg:flex fixed left-0 top-20 z-30 items-center gap-1.5 px-3 py-2 rounded-r-xl border border-l-0 border-slate-200/80 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 text-slate-700 dark:text-slate-200 shadow-md hover:bg-teal-50 dark:hover:bg-slate-800 hover:text-teal-700 dark:hover:text-teal-400 transition-all text-xs font-bold group backdrop-blur-xs"
+            title="Unhide Sidebar Navigation"
+          >
+            <ChevronsRight className="w-4 h-4 text-teal-600 dark:text-teal-400 group-hover:translate-x-0.5 transition-transform" />
+            <span>Unhide Menu</span>
+          </button>
+        )}
+
         {showSidebar && (
           <>
             {/* Mobile backdrop */}
@@ -80,7 +108,7 @@ const AppContent: React.FC = () => {
             <Sidebar
               isOpen={isSidebarOpen}
               onClose={() => setIsSidebarOpen(false)}
-              onOpenThemeModal={() => setIsThemeModalOpen(true)}
+              onToggle={toggleSidebar}
             />
           </>
         )}
@@ -91,11 +119,6 @@ const AppContent: React.FC = () => {
       </div>
 
       {showSidebar && <MobileBottomNav />}
-
-      <ThemeSelectorModal
-        isOpen={isThemeModalOpen}
-        onClose={() => setIsThemeModalOpen(false)}
-      />
     </div>
   );
 };

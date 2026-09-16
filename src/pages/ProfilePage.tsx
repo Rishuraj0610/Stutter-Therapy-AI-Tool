@@ -1,11 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import { User, Palette, Type, ShieldCheck, Stethoscope, Sun, Moon, LogOut, Check } from 'lucide-react';
-import { ThemeSelectorModal } from '../components/common/ThemeSelectorModal';
+import { User, Type, ShieldCheck, Stethoscope, LogOut, Check } from 'lucide-react';
 
 export const ProfilePage: React.FC = () => {
-  const { user, role, switchDemoRole, logout, theme, toggleTheme, appTheme, fontSize, setFontSize } = useAuth();
-  const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
+  const { user, role, switchDemoRole, logout, fontSize, setFontSize } = useAuth();
 
   return (
     <div className="mx-auto max-w-4xl space-y-8 pb-16">
@@ -46,26 +44,55 @@ export const ProfilePage: React.FC = () => {
         </button>
       </div>
 
-      {/* Theme & Design Improvement Preferences */}
+      {/* Display & Dark Mode Preferences */}
       <div className="rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 shadow-sm space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <Palette className="w-5 h-5 text-teal-600" />
-            <div>
-              <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-                Theme & Design Customization
-              </h3>
-              <p className="text-xs text-slate-500">
-                Active theme: <strong className="capitalize text-teal-600">{appTheme}</strong> • Dark mode: <strong className="capitalize text-teal-600">{theme}</strong>
-              </p>
+        <div>
+          <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+            Accessibility & Typography
+          </h3>
+          <p className="text-xs text-slate-500">
+            Control text scale for comfortable reading and speech therapy practice.
+          </p>
+        </div>
+
+        <div className="pt-1">
+          {/* Text Size Card */}
+          <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-white dark:bg-slate-800 shadow-xs border border-slate-200/60 dark:border-slate-700">
+                <Type className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-900 dark:text-white">Text Size</p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  {fontSize === 'large' ? 'Large accessibility scale' : 'Standard clinical scale'}
+                </p>
+              </div>
+            </div>
+
+            <div className="inline-flex rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-0.5 text-xs font-semibold">
+              <button
+                onClick={() => setFontSize('normal')}
+                className={`px-2.5 py-1 rounded-lg transition-all ${
+                  fontSize === 'normal'
+                    ? 'bg-teal-700 text-white shadow-2xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                }`}
+              >
+                Standard
+              </button>
+              <button
+                onClick={() => setFontSize('large')}
+                className={`px-2.5 py-1 rounded-lg transition-all ${
+                  fontSize === 'large'
+                    ? 'bg-teal-700 text-white shadow-2xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                }`}
+              >
+                Large +
+              </button>
             </div>
           </div>
-          <button
-            onClick={() => setIsThemeModalOpen(true)}
-            className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition-colors shadow-xs"
-          >
-            Customize Themes
-          </button>
         </div>
       </div>
 
@@ -119,8 +146,6 @@ export const ProfilePage: React.FC = () => {
           </button>
         </div>
       </div>
-
-      <ThemeSelectorModal isOpen={isThemeModalOpen} onClose={() => setIsThemeModalOpen(false)} />
     </div>
   );
 };

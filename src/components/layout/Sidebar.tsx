@@ -11,19 +11,20 @@ import {
   BookOpen,
   User,
   ShieldCheck,
-  Palette,
   LogOut,
-  HeartPulse
+  HeartPulse,
+  Flame,
+  ChevronsLeft
 } from 'lucide-react';
 
 interface SidebarProps {
-  onOpenThemeModal?: () => void;
   isOpen?: boolean;
   onClose?: () => void;
+  onToggle?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ onOpenThemeModal, isOpen = false, onClose }) => {
-  const { currentPage, setCurrentPage, role, user, logout } = useAuth();
+export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose, onToggle }) => {
+  const { currentPage, setCurrentPage, role, user, logout, streakDays } = useAuth();
 
   const patientNavItems = [
     { id: 'dashboard', label: 'Home / Dashboard', icon: Home },
@@ -55,28 +56,42 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenThemeModal, isOpen = fal
 
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-40 w-64 border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 transition-transform duration-200 lg:static lg:translate-x-0 ${
-        isOpen ? 'translate-x-0' : '-translate-x-full'
+      className={`fixed inset-y-0 left-0 z-40 border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 transition-all duration-300 ease-in-out lg:static shrink-0 ${
+        isOpen
+          ? 'w-64 translate-x-0 opacity-100 shadow-lg lg:shadow-none'
+          : '-translate-x-full lg:translate-x-0 lg:w-0 lg:p-0 lg:overflow-hidden lg:border-none opacity-0 pointer-events-none'
       }`}
     >
-      <div className="flex h-full flex-col justify-between p-4">
+      <div className={`flex h-full flex-col justify-between p-4 w-64 ${!isOpen ? 'hidden lg:hidden' : ''}`}>
         {/* Top Branding & Navigation */}
         <div className="space-y-6">
-          <div
-            onClick={() => handleNav('dashboard')}
-            className="flex items-center gap-3 px-2 cursor-pointer group"
-          >
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-700 text-white font-bold shadow-xs group-hover:bg-teal-800 transition-colors">
-              <HeartPulse className="w-5 h-5" />
+          <div className="flex items-center justify-between px-1">
+            <div
+              onClick={() => handleNav('dashboard')}
+              className="flex items-center gap-2.5 cursor-pointer group flex-1 min-w-0"
+            >
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-700 text-white font-bold shadow-xs group-hover:bg-teal-800 transition-colors shrink-0">
+                <HeartPulse className="w-5 h-5" />
+              </div>
+              <div className="truncate">
+                <span className="font-display font-bold text-base text-slate-900 dark:text-white leading-none block">
+                  FluencyAI
+                </span>
+                <span className="text-[11px] text-teal-700 dark:text-teal-400 font-medium truncate block">
+                  Speech Therapy Portal
+                </span>
+              </div>
             </div>
-            <div>
-              <span className="font-display font-bold text-base text-slate-900 dark:text-white leading-none block">
-                FluencyAI
-              </span>
-              <span className="text-[11px] text-teal-700 dark:text-teal-400 font-medium">
-                Speech Therapy Portal
-              </span>
-            </div>
+
+            {/* Collapse/Hide Sidebar Button */}
+            <button
+              onClick={onToggle || onClose}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-500 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition-colors shrink-0"
+              title="Hide sidebar menu"
+              aria-label="Hide sidebar menu"
+            >
+              <ChevronsLeft className="w-4 h-4" />
+            </button>
           </div>
 
           {/* Navigation Items */}
@@ -100,24 +115,33 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenThemeModal, isOpen = fal
                     }`}
                   />
                   <span className="truncate">{item.label}</span>
+                  {item.id === 'daily_plan' && (
+                    <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-950/80 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:text-amber-300">
+                      <Flame className="w-2.5 h-2.5 fill-amber-500 text-amber-600" />
+                      {streakDays}d
+                    </span>
+                  )}
                 </button>
               );
             })}
+
+            {/* Quick Hide Button at bottom of navigation */}
+            <button
+              onClick={onToggle || onClose}
+              className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800/80 transition-colors mt-2 border border-slate-200/60 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/20"
+              title="Hide sidebar menu"
+            >
+              <span className="flex items-center gap-2">
+                <ChevronsLeft className="w-4 h-4 text-slate-400" />
+                <span>Hide Sidebar</span>
+              </span>
+              <span className="text-[10px] uppercase font-bold text-slate-400">Collapse</span>
+            </button>
           </nav>
         </div>
 
         {/* Bottom Actions & User Profile */}
         <div className="space-y-2 pt-4 border-t border-slate-100 dark:border-slate-800">
-          {onOpenThemeModal && (
-            <button
-              onClick={onOpenThemeModal}
-              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors"
-            >
-              <Palette className="w-4 h-4 text-slate-400" />
-              <span>Accessibility & Theme</span>
-            </button>
-          )}
-
           {/* User Account Tile */}
           <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
             <div

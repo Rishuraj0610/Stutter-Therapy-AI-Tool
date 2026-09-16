@@ -1,9 +1,15 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Dumbbell, Play, CheckCircle2, Clock, Sparkles, Cpu } from 'lucide-react';
+import { Dumbbell, Play, CheckCircle2, Clock, Sparkles, Check } from 'lucide-react';
 
 export const ExercisesPage: React.FC = () => {
-  const { setCurrentPage } = useAuth();
+  const { setCurrentPage, recordPracticeSessionCompleted } = useAuth();
+  const [completedTitles, setCompletedTitles] = useState<string[]>([]);
+
+  const handleMarkComplete = (title: string) => {
+    recordPracticeSessionCompleted(title);
+    setCompletedTitles((prev) => [...prev, title]);
+  };
 
   const categories = [
     {
@@ -85,13 +91,33 @@ export const ExercisesPage: React.FC = () => {
               </div>
             </div>
 
-            <button
-              onClick={() => setCurrentPage('speech_practice')}
-              className="w-full mt-4 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs transition-colors shadow-xs"
-            >
-              <Play className="w-3.5 h-3.5" />
-              Practice This Exercise
-            </button>
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage('speech_practice')}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-semibold text-xs transition-colors shadow-xs"
+              >
+                <Play className="w-3.5 h-3.5" />
+                Practice Technique
+              </button>
+
+              <button
+                onClick={() => handleMarkComplete(cat.title)}
+                className={`px-3 py-2.5 rounded-xl text-xs font-semibold border transition-all ${
+                  completedTitles.includes(cat.title)
+                    ? 'bg-emerald-50 border-emerald-300 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800'
+                    : 'border-slate-200 hover:bg-slate-50 text-slate-700 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
+                }`}
+                title="Mark completed in today's daily plan"
+              >
+                {completedTitles.includes(cat.title) ? (
+                  <span className="flex items-center gap-1 text-emerald-700 dark:text-emerald-400">
+                    <Check className="w-3.5 h-3.5 stroke-[3]" /> Recorded
+                  </span>
+                ) : (
+                  'Mark Done'
+                )}
+              </button>
+            </div>
           </div>
         ))}
       </div>

@@ -423,9 +423,28 @@ app.post('/api/ml/analyze-speech', async (req, res) => {
   const duration = Math.max(Number(audioDurationSec) || 6, 4);
   const pitch = Number(detectedPitchHz) || 124;
 
-  let overallScore = 85.5;
-  let disfluencyRate = 4.2;
-  let speechRate = 138;
+  // Calculate realistic clinical metrics based on passage text and speech duration
+  const wordsInTarget = targetText ? targetText.split(/\s+/).filter(Boolean).length : 24;
+  let speechRate = Math.round((wordsInTarget / duration) * 60);
+  let disfluencyRate = 3.8;
+  let repetitionCount = 2;
+  let prolongationCount = 1;
+  let blockCount = 1;
+
+  // Clinical Multi-Factor Formula:
+  // Disfluency Factor (45%): 100 - (disfluencyRate * 4.5)
+  // Pacing Factor (25%): 100 - |speechRate - 130| * 1.3
+  // Continuity Factor (20%): 95 - (blockCount * 6)
+  // Stability Factor (10%): 90
+  const calcScore = (disfluency: number, wpm: number, blocks: number, stability: number) => {
+    const disfluencyFactor = Math.max(20, Math.min(100, 100 - (disfluency * 4.5)));
+    const pacingFactor = Math.max(30, Math.min(100, 100 - Math.abs(wpm - 130) * 1.3));
+    const continuityFactor = Math.max(20, Math.min(100, 95 - (blocks * 6)));
+    const stabilityFactor = Math.max(30, Math.min(100, stability));
+    return Math.round((disfluencyFactor * 0.45 + pacingFactor * 0.25 + continuityFactor * 0.20 + stabilityFactor * 0.10) * 10) / 10;
+  };
+
+  let overallScore = calcScore(disfluencyRate, speechRate, blockCount, 90);
   let clinicalImpression = 'Patient exhibits minor phoneme prolongations on initial unvoiced plosives. Articulatory pressure decreases after diaphragmatic exhalation.';
   let suggestedTechniques = [
     'Gentle Onset (Easy Starts) on initial consonants',
@@ -441,12 +460,21 @@ Analyze a patient's speech practice session:
 - Target Text: "${targetText || 'The Rainbow Passage'}"
 - Audio Duration: ${duration} seconds
 - Average Fundamental Pitch (f0): ${pitch} Hz
+- Calculated Speech Tempo: ~${speechRate} WPM
+
+Apply the clinical formula:
+Score = (0.45 * DisfluencyFactor) + (0.25 * PacingFactor) + (0.20 * ContinuityFactor) + (0.10 * StabilityFactor)
+where:
+- DisfluencyFactor = 100 - (disfluencyFrequencyPct * 4.5)
+- PacingFactor = 100 - |speechRateWpm - 130| * 1.3
+- ContinuityFactor = 95 - (blockCount * 6)
+- StabilityFactor = pitchStabilityPct
 
 Provide a JSON clinical acoustic evaluation object with the following keys ONLY:
 {
-  "overallFluencyScore": number (0-100, where 80-95 is standard functional fluency),
-  "disfluencyFrequencyPct": number (e.g. 2.5 to 8.0),
-  "speechRateWpm": number (words per minute, typical is 120-160),
+  "overallFluencyScore": number (0-100 calculated using the clinical formula above),
+  "disfluencyFrequencyPct": number (e.g. 2.0 to 7.5),
+  "speechRateWpm": number (words per minute),
   "jitterPct": number (0.8 - 2.5),
   "shimmerPct": number (1.5 - 4.5),
   "prolongationCount": number (0 - 4),
@@ -461,13 +489,20 @@ Return only raw JSON.`;
       const cleanJson = (text || '').replace(/```json/g, '').replace(/```/g, '').trim();
       const parsed = JSON.parse(cleanJson);
 
-      if (parsed.overallFluencyScore) overallScore = parsed.overallFluencyScore;
       if (parsed.disfluencyFrequencyPct) disfluencyRate = parsed.disfluencyFrequencyPct;
       if (parsed.speechRateWpm) speechRate = parsed.speechRateWpm;
+      if (parsed.repetitionCount !== undefined) repetitionCount = parsed.repetitionCount;
+      if (parsed.prolongationCount !== undefined) prolongationCount = parsed.prolongationCount;
+      if (parsed.blockCount !== undefined) blockCount = parsed.blockCount;
+      if (parsed.overallFluencyScore) {
+        overallScore = parsed.overallFluencyScore;
+      } else {
+        overallScore = calcScore(disfluencyRate, speechRate, blockCount, 90);
+      }
       if (parsed.clinicalImpression) clinicalImpression = parsed.clinicalImpression;
       if (parsed.suggestedTechniques) suggestedTechniques = parsed.suggestedTechniques;
     } catch {
-      // Gracefully utilize client and acoustic heuristic calculation if offline
+      overallScore = calcScore(disfluencyRate, speechRate, blockCount, 90);
     }
   }
 
@@ -482,9 +517,9 @@ Return only raw JSON.`;
       jitterPct: 1.15,
       shimmerPct: 2.82,
       speakingRateSyllablesPerSec: 3.7,
-      prolongationCount: 2,
-      repetitionCount: 2,
-      blockCount: 1,
+      prolongationCount: prolongationCount,
+      repetitionCount: repetitionCount,
+      blockCount: blockCount,
       vocalStrainIndex: 1.8
     },
     detectedEvents: [

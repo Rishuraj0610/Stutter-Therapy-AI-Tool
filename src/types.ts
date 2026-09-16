@@ -167,6 +167,8 @@ export interface DailyTask {
   completed: boolean;
   exerciseId: string;
   description: string;
+  completedAt?: string;
+  targetRoute?: string;
 }
 
 export interface DailyPracticePlan {

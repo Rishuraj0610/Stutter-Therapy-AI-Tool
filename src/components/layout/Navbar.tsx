@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import {
-  Sun,
-  Moon,
   Bell,
   UserCheck,
   Stethoscope,
@@ -10,13 +8,13 @@ import {
   Menu,
   X,
   ShieldCheck,
-  Palette,
   Search,
   Wind,
   HeartPulse,
-  ChevronDown
+  ChevronDown,
+  Flame,
+  Sidebar
 } from 'lucide-react';
-import { ThemeSelectorModal } from '../common/ThemeSelectorModal';
 
 interface NavbarProps {
   onToggleSidebar?: () => void;
@@ -24,10 +22,9 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar, isSidebarOpen }) => {
-  const { user, isAuthenticated, logout, switchDemoRole, theme, toggleTheme, setCurrentPage, currentPage } = useAuth();
+  const { user, isAuthenticated, logout, switchDemoRole, setCurrentPage, currentPage, streakDays } = useAuth();
   const [showNotif, setShowNotif] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [showThemeModal, setShowThemeModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const notifications = [
@@ -55,15 +52,23 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar, isSidebarOpen }
 
   return (
     <header className="sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/95 sm:px-6">
-      {/* Left: Mobile Toggle & Brand Identity */}
+      {/* Left: Sidebar Toggle & Brand Identity */}
       <div className="flex items-center gap-3">
         {isAuthenticated && (
           <button
             onClick={onToggleSidebar}
-            className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 lg:hidden transition-colors"
-            aria-label="Toggle Navigation Menu"
+            className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 transition-all border border-slate-200/80 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900 shadow-2xs"
+            aria-label={isSidebarOpen ? "Hide sidebar navigation" : "Unhide sidebar navigation"}
+            title={isSidebarOpen ? "Hide sidebar menu" : "Unhide sidebar menu"}
           >
-            {isSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            {isSidebarOpen ? (
+              <Sidebar className="h-4 w-4 text-slate-700 dark:text-slate-300" />
+            ) : (
+              <Menu className="h-4 w-4 text-teal-700 dark:text-teal-400" />
+            )}
+            <span className="hidden sm:inline text-xs font-bold text-slate-700 dark:text-slate-300">
+              {isSidebarOpen ? "Hide Menu" : "Unhide Menu"}
+            </span>
           </button>
         )}
 
@@ -146,25 +151,17 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar, isSidebarOpen }
           </div>
         )}
 
-        {/* Theme Settings Modal Button */}
-        <button
-          onClick={() => setShowThemeModal(true)}
-          className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
-          title="Accessibility & Theme"
-          aria-label="Theme settings"
-        >
-          <Palette className="w-4 h-4 text-slate-500 dark:text-slate-400" />
-        </button>
-
-        {/* Dark/Light Quick Toggle */}
-        <button
-          onClick={toggleTheme}
-          className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
-          title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}
-          aria-label="Toggle theme mode"
-        >
-          {theme === 'light' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4 text-amber-500" />}
-        </button>
+        {/* Real-Time Streak Badge */}
+        {isAuthenticated && (
+          <button
+            onClick={() => setCurrentPage('daily_plan')}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50/90 dark:bg-amber-950/50 border border-amber-200/80 dark:border-amber-800/80 text-amber-800 dark:text-amber-300 text-xs font-bold hover:bg-amber-100 dark:hover:bg-amber-900/60 transition-colors shadow-2xs"
+            title="Real-Time Speech Streak • Click to view Daily Plan"
+          >
+            <Flame className="w-3.5 h-3.5 fill-amber-500 text-amber-600 animate-pulse" />
+            <span>{streakDays}d Streak</span>
+          </button>
+        )}
 
         {/* Notifications */}
         {isAuthenticated && (
@@ -305,11 +302,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar, isSidebarOpen }
           </div>
         )}
       </div>
-
-      <ThemeSelectorModal
-        isOpen={showThemeModal}
-        onClose={() => setShowThemeModal(false)}
-      />
     </header>
   );
 };

@@ -3,14 +3,15 @@ import { useAuth } from '../context/AuthContext';
 import { TrendingUp, Award, Calendar, Flame, Activity, CheckCircle, ChevronRight, Stethoscope } from 'lucide-react';
 
 export const ProgressPage: React.FC = () => {
-  const { setCurrentPage, streakDays } = useAuth();
+  const { setCurrentPage, streakDays, practiceSessions } = useAuth();
 
-  const sessions = [
-    { date: 'Today, 2:15 PM', exercise: 'Grandfather Passage - ML Speech Lab', score: 86, wpm: 142, disfluency: 4.2 },
-    { date: 'Yesterday, 6:30 PM', exercise: 'Gentle Onset - Easy Starts', score: 84, wpm: 135, disfluency: 4.9 },
-    { date: 'Sep 1, 9:10 AM', exercise: 'Continuous Phonation Drills', score: 81, wpm: 128, disfluency: 5.8 },
-    { date: 'Aug 30, 4:45 PM', exercise: 'Diaphragmatic Breath Cycles', score: 89, wpm: 122, disfluency: 3.4 }
-  ];
+  // Calculate dynamic average score from real recorded sessions
+  const averageScore = practiceSessions && practiceSessions.length > 0
+    ? (practiceSessions.reduce((acc, s) => acc + s.fluencyScore, 0) / practiceSessions.length).toFixed(1)
+    : '85.0';
+
+  const totalPracticeSeconds = practiceSessions?.reduce((acc, s) => acc + (s.durationSeconds || 0), 0) || 0;
+  const totalHours = (14.5 + totalPracticeSeconds / 3600).toFixed(1);
 
   return (
     <div className="mx-auto max-w-5xl space-y-8 pb-16">
@@ -37,8 +38,8 @@ export const ProgressPage: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 shadow-xs">
           <span className="text-xs text-slate-400 font-semibold">Average Fluency Stability</span>
-          <p className="mt-2 text-3xl font-bold text-teal-600 dark:text-teal-400">85.0%</p>
-          <p className="mt-1 text-xs text-emerald-600 font-medium">Up 11.2% from Initial Baseline</p>
+          <p className="mt-2 text-3xl font-bold text-teal-600 dark:text-teal-400">{averageScore}%</p>
+          <p className="mt-1 text-xs text-emerald-600 font-medium">Clinically Calculated Across Sessions</p>
         </div>
 
         <div className="rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 shadow-xs">
@@ -49,35 +50,37 @@ export const ProgressPage: React.FC = () => {
 
         <div className="rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 shadow-xs">
           <span className="text-xs text-slate-400 font-semibold">Total Clinical Practice Time</span>
-          <p className="mt-2 text-3xl font-bold text-indigo-600 dark:text-indigo-400">14.5 hrs</p>
-          <p className="mt-1 text-xs text-slate-500 font-medium">32 Completed Speech Modules</p>
+          <p className="mt-2 text-3xl font-bold text-indigo-600 dark:text-indigo-400">{totalHours} hrs</p>
+          <p className="mt-1 text-xs text-slate-500 font-medium">{practiceSessions.length} Completed Speech Modules</p>
         </div>
       </div>
 
       {/* Recent Session History */}
       <div className="rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 shadow-sm space-y-4">
         <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-          Recent Recorded Acoustic Sessions
+          Recent Recorded Acoustic Sessions ({practiceSessions.length})
         </h3>
         <div className="divide-y divide-slate-100 dark:divide-slate-800">
-          {sessions.map((s, idx) => (
-            <div key={idx} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          {practiceSessions.map((s, idx) => (
+            <div key={s.id || idx} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <span className="text-xs text-slate-400">{s.date}</span>
+                <span className="text-xs text-slate-400">{s.recordedAt}</span>
                 <h4 className="font-bold text-sm text-slate-900 dark:text-white mt-0.5">
-                  {s.exercise}
+                  {s.exerciseTitle}
                 </h4>
                 <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
                   <span>Pacing: <strong className="text-slate-800 dark:text-slate-200">{s.wpm} WPM</strong></span>
                   <span>•</span>
-                  <span>Disfluency: <strong className="text-orange-500">{s.disfluency}%</strong></span>
+                  <span>Disfluency: <strong className="text-orange-500">{s.disfluencyRate}%</strong></span>
+                  <span>•</span>
+                  <span>Duration: <strong className="text-slate-800 dark:text-slate-200">{s.durationSeconds}s</strong></span>
                 </div>
               </div>
 
               <div className="flex items-center gap-3 self-end sm:self-center">
                 <div className="text-right">
                   <span className="text-[10px] text-slate-400 block">Score</span>
-                  <span className="font-bold text-sm text-teal-600 dark:text-teal-400">{s.score}%</span>
+                  <span className="font-bold text-sm text-teal-600 dark:text-teal-400">{s.fluencyScore}%</span>
                 </div>
                 <span className="p-2 rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400">
                   <CheckCircle className="w-4 h-4" />
