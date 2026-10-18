@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, UserRole, AppTheme, FontSize, DailyTask, PracticeSession } from '../types';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { User, UserRole, AppTheme, FontSize, DailyTask, PracticeSession, UserSession, VerificationStatus } from '../types';
 
 export interface NewDailyTaskInput {
   title: string;
@@ -10,6 +10,35 @@ export interface NewDailyTaskInput {
   targetRoute?: string;
 }
 
+export interface RegisterPatientPayload {
+  role: 'patient';
+  fullName: string;
+  email: string;
+  password?: string;
+  dateOfBirth?: string;
+  parentConsentGiven?: boolean;
+  stutterSeverity?: 'mild' | 'moderate' | 'severe' | 'not_sure';
+  primaryGoal?: string;
+  dpdpConsent: boolean;
+  researchConsent?: boolean;
+}
+
+export interface RegisterClinicianPayload {
+  role: 'therapist';
+  fullName: string;
+  email: string;
+  password?: string;
+  credential: string;
+  licenseNumber: string;
+  institution: string;
+  yearsOfExperience: number;
+  proofDocumentName?: string;
+  dpdpConsent: boolean;
+  researchConsent?: boolean;
+}
+
+export type RegisterPayload = RegisterPatientPayload | RegisterClinicianPayload;
+
 interface AuthContextType {
   user: User | null;
   role: UserRole;
@@ -19,25 +48,43 @@ interface AuthContextType {
   appTheme: AppTheme;
   fontSize: FontSize;
   currentPage: string;
+  authSubPage?: string; // 'login' | 'register' | 'forgot' | 'reset' | 'verify'
+  authParamToken?: string;
   streakDays: number;
   lastPracticeDate: string;
   dailyTasks: DailyTask[];
   currentTime: Date;
   practiceSessions: PracticeSession[];
+  inactivityWarning: boolean;
+  remainingInactivitySeconds: number;
+  // Account Actions
   toggleTheme: () => void;
   setAppTheme: (theme: AppTheme) => void;
   setFontSize: (size: FontSize) => void;
-  setCurrentPage: (page: string) => void;
+  setCurrentPage: (page: string, options?: { subPage?: string; token?: string }) => void;
   setStreakDays: (days: number) => void;
   toggleDailyTask: (taskId: string) => void;
   completeDailyTask: (taskId: string) => void;
   addDailyTask: (task: NewDailyTaskInput) => void;
   resetDailyPlan: () => void;
   recordPracticeSessionCompleted: (exerciseTitle?: string, sessionMetrics?: Partial<PracticeSession>) => void;
-  login: (email: string, role?: UserRole) => Promise<boolean>;
-  register: (email: string, fullName: string, role: UserRole) => Promise<boolean>;
+  // Auth methods
+  login: (email: string, password?: string, keepMeSignedIn?: boolean, roleOverride?: UserRole) => Promise<{ success: boolean; requires2FA?: boolean; error?: string }>;
+  verify2FA: (totpCode: string) => Promise<{ success: boolean; error?: string }>;
+  registerUser: (payload: RegisterPayload) => Promise<{ success: boolean; message: string; verificationToken?: string }>;
+  verifyEmail: (token: string) => Promise<{ success: boolean; message: string }>;
+  requestPasswordReset: (email: string) => Promise<{ success: boolean; message: string; debugResetToken?: string }>;
+  resetPasswordWithToken: (token: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
   logout: () => void;
+  terminateSession: (sessionId: string) => void;
+  terminateAllOtherSessions: () => void;
+  toggleTwoFactorAuth: (enable: boolean) => { secret?: string; recoveryCodes?: string[] };
+  deleteAccountWithGracePeriod: () => void;
+  cancelAccountDeletion: () => void;
+  downloadUserData: () => void;
   switchDemoRole: (role: UserRole) => void;
+  dismissInactivityWarning: () => void;
+  updateUserProfile: (updates: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -90,17 +137,80 @@ const INITIAL_DAILY_TASKS: DailyTask[] = [
   }
 ];
 
-const DEMO_PATIENT: User = {
-  id: 'usr-patient-1',
-  email: 'alex.patient@fluencyai.org',
-  fullName: 'Alex Johnson',
-  role: 'patient',
-  avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-  preferredTheme: 'teal',
-  fontSize: 'normal',
-  baselineDisfluencyRate: 8.4,
-  streakDays: 5
-};
+const INITIAL_SESSIONS: UserSession[] = [
+  {
+    id: 'sess-curr-1',
+    deviceInfo: 'Chrome 122 on macOS (Current Device)',
+    ip: '192.168.1.104',
+    browser: 'Chrome 122 (Desktop)',
+    createdAt: 'Today, 08:30 AM',
+    lastUsedAt: 'Just now',
+    current: true
+  },
+  {
+    id: 'sess-mobile-2',
+    deviceInfo: 'Mobile Safari on iPhone 15 Pro',
+    ip: '49.37.142.201',
+    browser: 'Mobile Safari',
+    createdAt: 'Yesterday, 07:15 PM',
+    lastUsedAt: '18 hours ago',
+    current: false
+  }
+];
+
+const ACCOUNTS_STORAGE_KEY = 'fluency_registered_accounts_v2';
+
+export function formatNameFromEmail(email: string): string {
+  if (!email) return 'User';
+  const prefix = email.split('@')[0];
+  const cleaned = prefix.replace(/[\._\-]+/g, ' ').replace(/\d+/g, '').trim();
+  if (!cleaned) {
+    return prefix.charAt(0).toUpperCase() + prefix.slice(1);
+  }
+  return cleaned
+    .split(' ')
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ');
+}
+
+export function getStoredAccounts(): User[] {
+  try {
+    const raw = localStorage.getItem(ACCOUNTS_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        // Filter out any legacy Alex Johnson records
+        return parsed.filter(
+          (u) => u.fullName !== 'Alex Johnson' && u.email !== 'alex.patient@fluencyai.org'
+        );
+      }
+    }
+  } catch (e) {
+    /* noop */
+  }
+  return [];
+}
+
+export function saveAccountToRegistry(userToSave: User) {
+  try {
+    const accounts = getStoredAccounts();
+    const idx = accounts.findIndex((a) => a.email.toLowerCase() === userToSave.email.toLowerCase());
+    if (idx >= 0) {
+      accounts[idx] = { ...accounts[idx], ...userToSave };
+    } else {
+      accounts.push(userToSave);
+    }
+    localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(accounts));
+  } catch (e) {
+    /* noop */
+  }
+}
+
+export function findAccountByEmail(email: string): User | undefined {
+  const accounts = getStoredAccounts();
+  return accounts.find((a) => a.email.toLowerCase() === email.trim().toLowerCase());
+}
 
 const DEMO_THERAPIST: User = {
   id: 'usr-dr-marcus',
@@ -112,20 +222,56 @@ const DEMO_THERAPIST: User = {
   specialization: 'Fluency Disorders & Neurogenic Stuttering',
   clinicName: 'Stuttering & Neuro-Fluency Institute',
   preferredTheme: 'teal',
-  fontSize: 'normal'
+  fontSize: 'normal',
+  emailVerified: true,
+  verificationStatus: 'verified',
+  licenseNumber: 'RCI-SLP-49201',
+  institution: 'National Institute for Speech & Hearing Sciences',
+  yearsOfExperience: 16,
+  dpdpConsent: true,
+  researchConsent: false,
+  twoFactorEnabled: true,
+  activeSessions: INITIAL_SESSIONS
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('fluency_user');
     if (saved) {
-      try { return JSON.parse(saved); } catch (e) { /* noop */ }
+      try {
+        const parsed = JSON.parse(saved);
+        // Clean out any legacy Alex Johnson account
+        if (parsed?.fullName === 'Alex Johnson' || parsed?.email === 'alex.patient@fluencyai.org') {
+          localStorage.removeItem('fluency_user');
+          localStorage.removeItem('fluency_token');
+          return null;
+        }
+        return parsed;
+      } catch (e) {
+        /* noop */
+      }
     }
-    return DEMO_PATIENT;
+    // Check if there is an active account in the registry
+    const accounts = getStoredAccounts();
+    if (accounts.length > 0) {
+      return accounts[0];
+    }
+    return null;
   });
 
   const [token, setToken] = useState<string | null>(() => {
-    return localStorage.getItem('fluency_token') || 'demo-jwt-token-patient';
+    const saved = localStorage.getItem('fluency_user');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed?.fullName === 'Alex Johnson' || parsed?.email === 'alex.patient@fluencyai.org') {
+          return null;
+        }
+      } catch (e) {
+        /* noop */
+      }
+    }
+    return localStorage.getItem('fluency_token') || null;
   });
 
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
@@ -138,7 +284,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return (localStorage.getItem('fluency_font_size') as FontSize) || 'normal';
   });
 
-  const [currentPage, setCurrentPage] = useState<string>('dashboard');
+  const [currentPage, setCurrentPageState] = useState<string>(() => {
+    const saved = localStorage.getItem('fluency_user');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed?.fullName !== 'Alex Johnson' && parsed?.email !== 'alex.patient@fluencyai.org') {
+          return parsed.role === 'therapist' ? 'admin' : 'dashboard';
+        }
+      } catch (e) {
+        /* noop */
+      }
+    }
+    const accounts = getStoredAccounts();
+    if (accounts.length > 0) {
+      return accounts[0].role === 'therapist' ? 'admin' : 'dashboard';
+    }
+    return 'landing';
+  });
+  const [authSubPage, setAuthSubPage] = useState<string>('login');
+  const [authParamToken, setAuthParamToken] = useState<string>('');
+
+  // 2FA pending state
+  const [pending2FAUser, setPending2FAUser] = useState<User | null>(null);
+
+  // Inactivity tracking for clinicians (HIPAA/DPDP 30-minute requirement)
+  const [inactivityWarning, setInactivityWarning] = useState<boolean>(false);
+  const [remainingInactivitySeconds, setRemainingInactivitySeconds] = useState<number>(60);
+  const lastActivityRef = useRef<number>(Date.now());
 
   // Real-time Streak and Practice tracking
   const [streakDays, setStreakDaysState] = useState<number>(() => {
@@ -193,60 +366,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         prolongationsCount: 1,
         blocksCount: 1,
         transcription: 'You wish to know all about my grandfather...'
-      },
-      {
-        id: 'sess-2',
-        userId: 'usr-patient-1',
-        exerciseId: 'gentle-1',
-        exerciseTitle: 'Gentle Onset - Easy Starts',
-        recordedAt: 'Yesterday, 6:30 PM',
-        durationSeconds: 35,
-        fluencyScore: 84.0,
-        wpm: 135,
-        disfluencyRate: 4.9,
-        repetitionsCount: 2,
-        prolongationsCount: 2,
-        blocksCount: 0,
-        transcription: 'Peter opened the blue umbrella before the sudden rain began.'
-      },
-      {
-        id: 'sess-3',
-        userId: 'usr-patient-1',
-        exerciseId: 'flow-1',
-        exerciseTitle: 'Continuous Phonation Drills',
-        recordedAt: 'Sep 1, 9:10 AM',
-        durationSeconds: 50,
-        fluencyScore: 81.2,
-        wpm: 128,
-        disfluencyRate: 5.8,
-        repetitionsCount: 3,
-        prolongationsCount: 2,
-        blocksCount: 1,
-        transcription: 'Every morning brings a quiet calm that slowly warms the valley.'
-      },
-      {
-        id: 'sess-4',
-        userId: 'usr-patient-1',
-        exerciseId: 'diaph-1',
-        exerciseTitle: 'Diaphragmatic Breath Cycles',
-        recordedAt: 'Aug 30, 4:45 PM',
-        durationSeconds: 60,
-        fluencyScore: 89.1,
-        wpm: 122,
-        disfluencyRate: 3.4,
-        repetitionsCount: 1,
-        prolongationsCount: 1,
-        blocksCount: 0,
-        transcription: 'Breathe in slowly through the nose, feel the belly expand.'
       }
     ];
   });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('fluency_practice_sessions_v2', JSON.stringify(practiceSessions));
-    } catch (e) {}
-  }, [practiceSessions]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -255,107 +377,91 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => clearInterval(timer);
   }, []);
 
-  // Save daily tasks whenever updated
+  // Clinician auto-logout inactivity monitor (30 minutes)
   useEffect(() => {
-    localStorage.setItem('fluency_daily_tasks_v2', JSON.stringify(dailyTasks));
-  }, [dailyTasks]);
+    if (!user || user.role !== 'therapist') return;
 
-  // Save streak whenever updated
-  useEffect(() => {
-    localStorage.setItem('fluency_streak_v2', streakDays.toString());
-  }, [streakDays]);
+    const handleUserActivity = () => {
+      lastActivityRef.current = Date.now();
+      if (inactivityWarning) {
+        setInactivityWarning(false);
+      }
+    };
 
-  useEffect(() => {
-    if (lastPracticeDate) {
-      localStorage.setItem('fluency_last_practice_date_v2', lastPracticeDate);
-    }
-  }, [lastPracticeDate]);
+    window.addEventListener('mousemove', handleUserActivity);
+    window.addEventListener('keydown', handleUserActivity);
+    window.addEventListener('click', handleUserActivity);
 
-  const setStreakDays = (days: number) => {
-    setStreakDaysState(days);
+    const checkInterval = setInterval(() => {
+      const elapsedMs = Date.now() - lastActivityRef.current;
+      const thirtyMinutesMs = 30 * 60 * 1000;
+      const warningThresholdMs = 29 * 60 * 1000; // 1 min before logout
+
+      if (elapsedMs >= thirtyMinutesMs) {
+        // Log out automatically
+        logout();
+        setInactivityWarning(false);
+      } else if (elapsedMs >= warningThresholdMs) {
+        setInactivityWarning(true);
+        setRemainingInactivitySeconds(Math.max(0, Math.round((thirtyMinutesMs - elapsedMs) / 1000)));
+      }
+    }, 5000);
+
+    return () => {
+      window.removeEventListener('mousemove', handleUserActivity);
+      window.removeEventListener('keydown', handleUserActivity);
+      window.removeEventListener('click', handleUserActivity);
+      clearInterval(checkInterval);
+    };
+  }, [user, inactivityWarning]);
+
+  const dismissInactivityWarning = () => {
+    lastActivityRef.current = Date.now();
+    setInactivityWarning(false);
   };
 
-  const getTodayDateString = () => new Date().toISOString().split('T')[0];
-
-  // Helper to advance streak if user practiced today
-  const creditStreakForToday = () => {
-    const today = getTodayDateString();
-    if (lastPracticeDate !== today) {
-      setStreakDaysState((prev) => prev + 1);
-      setLastPracticeDate(today);
+  const setCurrentPage = (page: string, options?: { subPage?: string; token?: string }) => {
+    setCurrentPageState(page);
+    if (options?.subPage) {
+      setAuthSubPage(options.subPage);
+    }
+    if (options?.token) {
+      setAuthParamToken(options.token);
     }
   };
 
-  // Toggle or complete a task in real time
   const toggleDailyTask = (taskId: string) => {
     setDailyTasks((prev) =>
-      prev.map((t) => {
-        if (t.id === taskId) {
-          const willBeDone = !t.completed;
-          if (willBeDone) {
-            creditStreakForToday();
-          }
-          return {
-            ...t,
-            completed: willBeDone,
-            completedAt: willBeDone
-              ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-              : undefined
-          };
-        }
-        return t;
-      })
+      prev.map((t) => (t.id === taskId ? { ...t, completed: !t.completed, completedAt: !t.completed ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined } : t))
     );
   };
 
   const completeDailyTask = (taskId: string) => {
-    creditStreakForToday();
     setDailyTasks((prev) =>
-      prev.map((t) =>
-        t.id === taskId
-          ? {
-              ...t,
-              completed: true,
-              completedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            }
-          : t
-      )
+      prev.map((t) => (t.id === taskId ? { ...t, completed: true, completedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) } : t))
     );
   };
 
-  const addDailyTask = (input: NewDailyTaskInput) => {
+  const addDailyTask = (task: NewDailyTaskInput) => {
     const newTask: DailyTask = {
-      id: `dt-${Date.now()}`,
-      timeOfDay: input.timeOfDay,
-      title: input.title,
-      category: input.category,
-      durationMinutes: input.durationMinutes,
-      completed: false,
-      exerciseId: `custom-${Date.now()}`,
-      targetRoute: input.targetRoute || 'speech_practice',
-      description: input.description
+      id: `task-${Date.now()}`,
+      exerciseId: `ex-${Date.now()}`,
+      title: task.title,
+      category: task.category,
+      durationMinutes: task.durationMinutes,
+      timeOfDay: task.timeOfDay,
+      description: task.description,
+      targetRoute: task.targetRoute,
+      completed: false
     };
     setDailyTasks((prev) => [...prev, newTask]);
   };
 
   const resetDailyPlan = () => {
-    setDailyTasks(
-      INITIAL_DAILY_TASKS.map((t) => ({
-        ...t,
-        completed: false,
-        completedAt: undefined
-      }))
-    );
+    setDailyTasks(INITIAL_DAILY_TASKS.map((t) => ({ ...t, completed: false, completedAt: undefined })));
   };
 
-  // Automatically credit practice session
-  const recordPracticeSessionCompleted = (
-    exerciseTitle?: string,
-    sessionMetrics?: Partial<PracticeSession>
-  ) => {
-    creditStreakForToday();
-
-    // Create persistent recorded practice session
+  const recordPracticeSessionCompleted = (exerciseTitle?: string, sessionMetrics?: Partial<PracticeSession>) => {
     const now = new Date();
     const timeFormatted = `Today, ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
     const newSession: PracticeSession = {
@@ -375,72 +481,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     setPracticeSessions((prev) => [newSession, ...prev]);
-
-    setDailyTasks((prev) => {
-      // Find matching uncompleted task or first uncompleted task
-      let matchedIndex = -1;
-      if (exerciseTitle) {
-        matchedIndex = prev.findIndex(
-          (t) => !t.completed && (t.title.toLowerCase().includes(exerciseTitle.toLowerCase()) || exerciseTitle.toLowerCase().includes(t.title.toLowerCase()))
-        );
-      }
-      if (matchedIndex === -1) {
-        matchedIndex = prev.findIndex((t) => !t.completed);
-      }
-
-      if (matchedIndex !== -1) {
-        return prev.map((t, idx) =>
-          idx === matchedIndex
-            ? {
-                ...t,
-                completed: true,
-                completedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-              }
-            : t
-        );
-      }
-      return prev;
-    });
   };
 
-  useEffect(() => {
-    const root = document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-    localStorage.setItem('fluency_dark_theme', theme);
-  }, [theme]);
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', appTheme);
-    localStorage.setItem('fluency_app_theme', appTheme);
-  }, [appTheme]);
-
-  useEffect(() => {
-    if (fontSize === 'large') {
-      document.documentElement.classList.add('text-lg-mode');
-    } else {
-      document.documentElement.classList.remove('text-lg-mode');
-    }
-    localStorage.setItem('fluency_font_size', fontSize);
-  }, [fontSize]);
-
   const toggleTheme = () => {
-    setTheme(prev => {
-      const next = prev === 'light' ? 'dark' : 'light';
-      const root = document.documentElement;
-      if (next === 'dark') {
-        root.classList.add('dark');
-      } else {
-        root.classList.remove('dark');
-      }
-      try {
-        localStorage.setItem('fluency_dark_theme', next);
-      } catch (e) {}
-      return next;
-    });
+    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
   };
 
   const setAppTheme = (t: AppTheme) => {
@@ -451,59 +495,355 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setFontSizeState(s);
   };
 
-  const login = async (email: string, role: UserRole = 'patient'): Promise<boolean> => {
-    const selectedUser = role === 'therapist' ? { ...DEMO_THERAPIST, email } : { ...DEMO_PATIENT, email };
-    setUser(selectedUser);
-    const mockToken = role === 'therapist' ? 'demo-jwt-token-therapist' : 'demo-jwt-token-patient';
-    setToken(mockToken);
-    localStorage.setItem('fluency_user', JSON.stringify(selectedUser));
-    localStorage.setItem('fluency_token', mockToken);
-    setCurrentPage(role === 'therapist' ? 'admin' : 'dashboard');
-    return true;
+  const setStreakDays = (days: number) => {
+    setStreakDaysState(days);
   };
 
-  const register = async (email: string, fullName: string, role: UserRole): Promise<boolean> => {
+  // Auth: Login Flow
+  const login = async (
+    email: string,
+    password?: string,
+    keepMeSignedIn = true,
+    roleOverride?: UserRole
+  ): Promise<{ success: boolean; requires2FA?: boolean; error?: string }> => {
+    const cleanEmail = email.trim().toLowerCase();
+    const isClinician =
+      roleOverride === 'therapist' ||
+      cleanEmail.includes('dr.') ||
+      cleanEmail.includes('marcus') ||
+      cleanEmail.includes('slp') ||
+      cleanEmail.includes('therapist');
+
+    // 1. Check if user already exists in registered accounts registry
+    let targetUser = findAccountByEmail(cleanEmail);
+
+    if (!targetUser) {
+      // Create user account from login credentials dynamically
+      const displayName = cleanEmail.includes('marcus')
+        ? 'Dr. Marcus Vance, CCC-SLP'
+        : formatNameFromEmail(cleanEmail);
+
+      const targetRole: UserRole = isClinician ? 'therapist' : (roleOverride || 'patient');
+
+      targetUser = {
+        id: `usr-${Date.now()}`,
+        email: cleanEmail,
+        fullName: displayName,
+        role: targetRole,
+        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(displayName)}`,
+        preferredTheme: appTheme,
+        fontSize: fontSize,
+        baselineDisfluencyRate: targetRole === 'patient' ? 5.8 : undefined,
+        streakDays: 1,
+        emailVerified: true,
+        verificationStatus: 'verified',
+        stutterSeverity: targetRole === 'patient' ? 'moderate' : undefined,
+        primaryGoal: targetRole === 'patient' ? 'Gentle onset and speaking confidence' : undefined,
+        credentials: targetRole === 'therapist' ? 'CCC-SLP' : undefined,
+        licenseNumber: targetRole === 'therapist' ? 'SLP-RCI-2026' : undefined,
+        institution: targetRole === 'therapist' ? 'Speech Pathology Institute' : undefined,
+        yearsOfExperience: targetRole === 'therapist' ? 8 : undefined,
+        dpdpConsent: true,
+        researchConsent: false,
+        twoFactorEnabled: false,
+        activeSessions: INITIAL_SESSIONS
+      };
+
+      saveAccountToRegistry(targetUser);
+    } else {
+      // Update session last active
+      targetUser = {
+        ...targetUser,
+        lastLoginAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      saveAccountToRegistry(targetUser);
+    }
+
+    // Check if 2FA is required for this account
+    if (targetUser.twoFactorEnabled) {
+      setPending2FAUser(targetUser);
+      return { success: false, requires2FA: true };
+    }
+
+    // Successful authentication
+    setUser(targetUser);
+    const mockToken = `jwt-${targetUser.role}-${targetUser.id}`;
+    setToken(mockToken);
+    localStorage.setItem('fluency_user', JSON.stringify(targetUser));
+    localStorage.setItem('fluency_token', mockToken);
+
+    // Redirect by role
+    if (targetUser.role === 'therapist') {
+      setCurrentPage('admin');
+    } else {
+      setCurrentPage('dashboard');
+    }
+
+    return { success: true };
+  };
+
+  // Auth: 2FA Verification
+  const verify2FA = async (totpCode: string): Promise<{ success: boolean; error?: string }> => {
+    if (!pending2FAUser) {
+      return { success: false, error: 'No active sign-in session to verify.' };
+    }
+    // Accept valid 6-digit code or demo default 123456
+    if (totpCode.trim().length === 6) {
+      const authenticatedUser = pending2FAUser;
+      setUser(authenticatedUser);
+      setPending2FAUser(null);
+      const mockToken = `jwt-${authenticatedUser.role}-${authenticatedUser.id}`;
+      setToken(mockToken);
+      localStorage.setItem('fluency_user', JSON.stringify(authenticatedUser));
+      localStorage.setItem('fluency_token', mockToken);
+
+      if (authenticatedUser.role === 'therapist') {
+        setCurrentPage('admin');
+      } else {
+        setCurrentPage('dashboard');
+      }
+      return { success: true };
+    }
+    return { success: false, error: 'Invalid 6-digit code. Please check your authenticator app.' };
+  };
+
+  // Auth: Registration Flow
+  const registerUser = async (payload: RegisterPayload): Promise<{ success: boolean; message: string; verificationToken?: string }> => {
+    const dummyToken = `verify-${Math.random().toString(36).substring(2, 10)}`;
+    const isClinician = payload.role === 'therapist';
+    const cleanEmail = payload.email.trim().toLowerCase();
+    const cleanName = payload.fullName.trim() || formatNameFromEmail(cleanEmail);
+
     const newUser: User = {
       id: `usr-${Date.now()}`,
-      email,
-      fullName,
-      role,
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${fullName}`,
+      email: cleanEmail,
+      fullName: cleanName,
+      role: payload.role,
+      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(cleanName)}`,
       preferredTheme: appTheme,
       fontSize: fontSize,
-      streakDays: 1
+      baselineDisfluencyRate: isClinician ? undefined : 6.2,
+      streakDays: 1,
+      emailVerified: true,
+      verificationStatus: isClinician ? 'pending_verification' : 'verified',
+      dpdpConsent: payload.dpdpConsent,
+      researchConsent: payload.researchConsent || false,
+      ...(isClinician
+        ? {
+            credentials: (payload as RegisterClinicianPayload).credential || 'CCC-SLP',
+            licenseNumber: (payload as RegisterClinicianPayload).licenseNumber || 'PENDING-LIC',
+            institution: (payload as RegisterClinicianPayload).institution || 'Speech Clinic',
+            yearsOfExperience: (payload as RegisterClinicianPayload).yearsOfExperience || 1
+          }
+        : {
+            dateOfBirth: (payload as RegisterPatientPayload).dateOfBirth,
+            parentConsentGiven: (payload as RegisterPatientPayload).parentConsentGiven,
+            stutterSeverity: (payload as RegisterPatientPayload).stutterSeverity || 'moderate',
+            primaryGoal: (payload as RegisterPatientPayload).primaryGoal || 'Improve daily fluency confidence and speech ease'
+          }),
+      activeSessions: [
+        {
+          id: `sess-${Date.now()}`,
+          deviceInfo: 'Browser Session (Current Device)',
+          ip: '127.0.0.1',
+          browser: 'Current Device',
+          createdAt: 'Just now',
+          lastUsedAt: 'Just now',
+          current: true
+        }
+      ]
     };
+
+    saveAccountToRegistry(newUser);
     setUser(newUser);
-    const mockToken = role === 'therapist' ? 'demo-jwt-token-therapist' : 'demo-jwt-token-patient';
+    const mockToken = `jwt-${newUser.role}-${newUser.id}`;
     setToken(mockToken);
     localStorage.setItem('fluency_user', JSON.stringify(newUser));
     localStorage.setItem('fluency_token', mockToken);
-    setCurrentPage(role === 'therapist' ? 'admin' : 'dashboard');
-    return true;
+
+    return {
+      success: true,
+      message: 'Registration complete! Welcome to FluencyAI.',
+      verificationToken: dummyToken
+    };
   };
 
+  // Auth: Verify Email
+  const verifyEmail = async (token: string): Promise<{ success: boolean; message: string }> => {
+    if (user) {
+      const updated = { ...user, emailVerified: true };
+      setUser(updated);
+      localStorage.setItem('fluency_user', JSON.stringify(updated));
+    }
+    return { success: true, message: 'Your email address has been verified successfully!' };
+  };
+
+  // Auth: Password Reset Request
+  const requestPasswordReset = async (email: string): Promise<{ success: boolean; message: string; debugResetToken?: string }> => {
+    const dummyToken = `reset-${Math.random().toString(36).substring(2, 10)}`;
+    return {
+      success: true,
+      message: "If that email exists in our system, we've sent a secure reset link valid for 30 minutes.",
+      debugResetToken: dummyToken
+    };
+  };
+
+  // Auth: Complete Password Reset
+  const resetPasswordWithToken = async (token: string, newPassword: string): Promise<{ success: boolean; message: string }> => {
+    return {
+      success: true,
+      message: 'Your password has been securely updated. You can now sign in with your new credentials.'
+    };
+  };
+
+  // Auth: Logout
   const logout = () => {
     setUser(null);
     setToken(null);
+    setPending2FAUser(null);
     localStorage.removeItem('fluency_user');
     localStorage.removeItem('fluency_token');
     setCurrentPage('landing');
   };
 
+  // Session Management
+  const terminateSession = (sessionId: string) => {
+    if (!user) return;
+    const updatedSessions = (user.activeSessions || []).filter((s) => s.id !== sessionId);
+    const updated = { ...user, activeSessions: updatedSessions };
+    setUser(updated);
+    localStorage.setItem('fluency_user', JSON.stringify(updated));
+  };
+
+  const terminateAllOtherSessions = () => {
+    if (!user) return;
+    const currentSessions = (user.activeSessions || []).filter((s) => s.current);
+    const updated = { ...user, activeSessions: currentSessions };
+    setUser(updated);
+    localStorage.setItem('fluency_user', JSON.stringify(updated));
+  };
+
+  // 2FA Management
+  const toggleTwoFactorAuth = (enable: boolean) => {
+    if (!user) return {};
+    const secret = enable ? 'JBSWY3DPEHPK3PXP' : undefined;
+    const recoveryCodes = enable ? ['A98B-7721', 'K28L-9914', 'M54Q-3312', 'X81P-0094'] : undefined;
+    const updated: User = {
+      ...user,
+      twoFactorEnabled: enable,
+      twoFactorSecret: secret,
+      recoveryCodes: recoveryCodes
+    };
+    setUser(updated);
+    localStorage.setItem('fluency_user', JSON.stringify(updated));
+    return { secret, recoveryCodes };
+  };
+
+  // Account Deletion & DPDP Grace Period
+  const deleteAccountWithGracePeriod = () => {
+    if (!user) return;
+    const graceDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const updated = { ...user, accountDeletionScheduled: graceDate };
+    setUser(updated);
+    localStorage.setItem('fluency_user', JSON.stringify(updated));
+  };
+
+  const cancelAccountDeletion = () => {
+    if (!user) return;
+    const updated = { ...user, accountDeletionScheduled: undefined };
+    setUser(updated);
+    localStorage.setItem('fluency_user', JSON.stringify(updated));
+  };
+
+  // Download User Data (JSON Export - DPDP Act 2023 / HIPAA)
+  const downloadUserData = () => {
+    if (!user) return;
+    const exportData = {
+      exportTimestamp: new Date().toISOString(),
+      complianceNotice: 'DPDP Act 2023 & HIPAA Personal Data Archive',
+      userProfile: user,
+      clinicalSessions: practiceSessions,
+      dailyTasks: dailyTasks
+    };
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `FluencyAI-Patient-Data-${user.id}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // Quick Demo Role Switcher
   const switchDemoRole = (targetRole: UserRole) => {
     if (targetRole === 'therapist') {
       setUser(DEMO_THERAPIST);
-      setToken('demo-jwt-token-therapist');
+      const mockToken = `jwt-therapist-${DEMO_THERAPIST.id}`;
+      setToken(mockToken);
       localStorage.setItem('fluency_user', JSON.stringify(DEMO_THERAPIST));
-      localStorage.setItem('fluency_token', 'demo-jwt-token-therapist');
+      localStorage.setItem('fluency_token', mockToken);
+      saveAccountToRegistry(DEMO_THERAPIST);
       setCurrentPage('admin');
     } else {
-      setUser(DEMO_PATIENT);
-      setToken('demo-jwt-token-patient');
-      localStorage.setItem('fluency_user', JSON.stringify(DEMO_PATIENT));
-      localStorage.setItem('fluency_token', 'demo-jwt-token-patient');
+      // Find registered patient in registry or preserve current user as patient
+      const stored = getStoredAccounts();
+      const existingPatient = stored.find((a) => a.role === 'patient');
+
+      let patientUser: User;
+      if (existingPatient) {
+        patientUser = existingPatient;
+      } else if (user && user.role !== 'therapist') {
+        patientUser = user;
+      } else {
+        const defaultName = user?.fullName && !user.fullName.includes('Marcus') ? user.fullName : 'Patient Member';
+        patientUser = {
+          id: `usr-patient-${Date.now()}`,
+          email: user?.email && !user.email.includes('marcus') ? user.email : 'patient@fluencyai.org',
+          fullName: defaultName,
+          role: 'patient',
+          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(defaultName)}`,
+          preferredTheme: appTheme,
+          fontSize: fontSize,
+          baselineDisfluencyRate: 5.6,
+          streakDays: 3,
+          emailVerified: true,
+          verificationStatus: 'verified',
+          stutterSeverity: 'moderate',
+          primaryGoal: 'Conquer anticipatory phone call blocks with gentle onset',
+          dpdpConsent: true,
+          researchConsent: true,
+          twoFactorEnabled: false,
+          activeSessions: INITIAL_SESSIONS
+        };
+      }
+
+      saveAccountToRegistry(patientUser);
+      setUser(patientUser);
+      const mockToken = `jwt-patient-${patientUser.id}`;
+      setToken(mockToken);
+      localStorage.setItem('fluency_user', JSON.stringify(patientUser));
+      localStorage.setItem('fluency_token', mockToken);
       setCurrentPage('dashboard');
     }
+  };
+
+  // Update profile for currently logged-in user
+  const updateUserProfile = (updates: Partial<User>) => {
+    if (!user) return;
+    const updated: User = {
+      ...user,
+      ...updates,
+      ...(updates.fullName && !updates.avatar
+        ? {
+            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(updates.fullName)}`
+          }
+        : {})
+    };
+    setUser(updated);
+    localStorage.setItem('fluency_user', JSON.stringify(updated));
+    saveAccountToRegistry(updated);
   };
 
   return (
@@ -517,11 +857,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         appTheme,
         fontSize,
         currentPage,
+        authSubPage,
+        authParamToken,
         streakDays,
         lastPracticeDate,
         dailyTasks,
         currentTime,
         practiceSessions,
+        inactivityWarning,
+        remainingInactivitySeconds,
         toggleTheme,
         setAppTheme,
         setFontSize,
@@ -533,9 +877,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         resetDailyPlan,
         recordPracticeSessionCompleted,
         login,
-        register,
+        verify2FA,
+        registerUser,
+        verifyEmail,
+        requestPasswordReset,
+        resetPasswordWithToken,
         logout,
-        switchDemoRole
+        terminateSession,
+        terminateAllOtherSessions,
+        toggleTwoFactorAuth,
+        deleteAccountWithGracePeriod,
+        cancelAccountDeletion,
+        downloadUserData,
+        switchDemoRole,
+        dismissInactivityWarning,
+        updateUserProfile
       }}
     >
       {children}

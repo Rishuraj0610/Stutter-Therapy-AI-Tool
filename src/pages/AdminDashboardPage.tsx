@@ -5,6 +5,39 @@ import { Stethoscope, Users, Calendar, Activity, CheckCircle, FileText, Video, B
 export const AdminDashboardPage: React.FC = () => {
   const { user, setCurrentPage } = useAuth();
 
+  // If clinician verification is pending, restrict patient caseload access completely
+  if (user && user.verificationStatus === 'pending_verification') {
+    return (
+      <div className="mx-auto max-w-2xl space-y-6 pt-12 pb-20 text-center">
+        <div className="p-8 rounded-3xl bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-800 shadow-xl space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-amber-50 dark:bg-amber-950 text-amber-600 flex items-center justify-center mx-auto">
+            <Stethoscope className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+            SLP Clinical Verification in Progress
+          </h2>
+          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed max-w-md mx-auto">
+            Your professional speech pathology license credentials ({user.licenseNumber || 'License on file'}) have been submitted and are currently awaiting administrative review.
+          </p>
+          <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 text-xs border border-amber-200 dark:border-amber-800 max-w-md mx-auto text-left">
+            <strong>Patient Privacy Shield (HIPAA & DPDP Act 2023):</strong>
+            <p className="mt-1 text-[11px] text-amber-800 dark:text-amber-300">
+              To protect vulnerable individuals and speech recordings, access to patient charts, disfluency spectrograms, and booking requests is locked until credential verification is finalized.
+            </p>
+          </div>
+          <div className="pt-2">
+            <button
+              onClick={() => setCurrentPage('profile')}
+              className="px-4 py-2 rounded-xl bg-teal-700 text-white font-bold text-xs hover:bg-teal-800"
+            >
+              Review My Profile & Licensure Document
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const patients = [
     { name: 'Alex Johnson', lastSeen: 'Today, 2:15 PM', baseline: 8.4, currentRate: 4.2, status: 'Improving', trend: '+12%' },
     { name: 'Sophia Chen', lastSeen: 'Yesterday', baseline: 11.2, currentRate: 7.1, status: 'Consistent', trend: '+8%' },

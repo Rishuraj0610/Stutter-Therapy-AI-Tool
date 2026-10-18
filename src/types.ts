@@ -1,6 +1,18 @@
 export type UserRole = 'patient' | 'therapist' | 'admin';
-export type AppTheme = 'teal' | 'indigo' | 'warm' | 'contrast';
+export type AppTheme = 'teal' | 'indigo' | 'warm';
 export type FontSize = 'normal' | 'large';
+
+export type VerificationStatus = 'verified' | 'pending_verification' | 'rejected';
+
+export interface UserSession {
+  id: string;
+  deviceInfo: string;
+  ip: string;
+  browser: string;
+  createdAt: string;
+  lastUsedAt: string;
+  current: boolean;
+}
 
 export interface User {
   id: string;
@@ -17,6 +29,26 @@ export interface User {
   specialization?: string;
   clinicName?: string;
   credentials?: string;
+  // Enhanced Auth, Security & Clinical Compliance Fields
+  emailVerified: boolean;
+  verificationStatus: VerificationStatus;
+  licenseNumber?: string;
+  institution?: string;
+  yearsOfExperience?: number;
+  twoFactorEnabled?: boolean;
+  twoFactorSecret?: string;
+  totpCode?: string;
+  recoveryCodes?: string[];
+  lastLoginAt?: string;
+  lastLoginIp?: string;
+  dateOfBirth?: string;
+  parentConsentGiven?: boolean;
+  stutterSeverity?: 'mild' | 'moderate' | 'severe' | 'not_sure';
+  primaryGoal?: string;
+  researchConsent?: boolean;
+  dpdpConsent?: boolean;
+  activeSessions?: UserSession[];
+  accountDeletionScheduled?: string; // 7-day grace period timestamp
 }
 
 export interface Doctor {

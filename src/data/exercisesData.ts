@@ -156,6 +156,24 @@ export const INITIAL_EXERCISES: TherapyExercise[] = [
       'Pausing looks confident to listeners, even when it feels long to you.'
     ]
   },
+  {
+    id: 'read-4',
+    title: 'The Grandfather Passage (Clinical Paragraph)',
+    description: 'A comprehensive multi-sentence clinical assessment paragraph testing natural rhythm and multi-syllable transitions.',
+    category: 'reading',
+    difficulty: 'intermediate',
+    durationMinutes: 10,
+    targetPaceWpm: 120,
+    passageText: 'You wish to know all about my grandfather. Well, he is nearly ninety-three years old, yet he dresses himself in an ancient black coat with several shiny buttons. A long, flowing beard clings to his chin, giving those who observe him a pronounced feeling of the utmost respect and admiration.',
+    instructions: [
+      'Read slowly through the entire paragraph.',
+      'Replenish air silently at commas and periods.',
+      'Focus on keeping jaw relaxed throughout long vowel shifts.'
+    ],
+    tips: [
+      'Break into three comfortable breath groups instead of rushing to the end.'
+    ]
+  },
 
   // 4. Difficult Word Practice
   {
@@ -191,6 +209,29 @@ export const INITIAL_EXERCISES: TherapyExercise[] = [
     ],
     tips: [
       'Think of consonant clusters as a smooth ramp rather than stairs.'
+    ]
+  },
+  {
+    id: 'word-3',
+    title: 'Clinical Tongue Twisters (Light Articulatory Contact)',
+    description: 'Precision agility drills targeting plosives, liquids, and sibilants to prevent tension clenching on rapid consonant shifts.',
+    category: 'difficult_words',
+    difficulty: 'advanced',
+    durationMinutes: 8,
+    targetWords: [
+      'Peter Piper picked a peck of pickled peppers.',
+      'She sells seashells by the seashore.',
+      'Betty Botter bought some butter.',
+      'Red lorry, yellow lorry, rolling along.'
+    ],
+    instructions: [
+      'Start each twister at half your normal speed.',
+      'Touch your tongue tip or lips with feather lightness.',
+      'Do not tighten the jaw or press your teeth together.',
+      'Maintain continuous gentle airflow beneath the consonant shifts.'
+    ],
+    tips: [
+      'Accuracy and effortless release are the goals, not pure speed.'
     ]
   },
 

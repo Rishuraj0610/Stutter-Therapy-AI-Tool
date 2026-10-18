@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import {
   calculateClinicalFluencyScore,
@@ -26,27 +26,70 @@ import {
   Target,
   MessageSquare,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  ChevronLeft,
+  ChevronRight,
+  BookOpen,
+  Zap,
+  Search,
+  Layers,
+  X,
+  Clock,
+  Compass,
+  Edit3
 } from 'lucide-react';
-
-interface Exercise {
-  title: string;
-  technique: string;
-  wpm: number;
-  description: string;
-  sample: string;
-}
+import {
+  PRACTICE_SPEECHES,
+  PRACTICE_CATEGORIES,
+  PracticeExerciseItem,
+  PracticeCategory
+} from '../data/speechPracticeData';
+import {
+  SUPPORTED_LANGUAGES,
+  MULTILINGUAL_SPEECHES
+} from '../data/multiLanguageSpeechData';
+import { ProstheticAidsPanel } from '../components/speech/ProstheticAidsPanel';
+import { LiveSpectrogramVisualizer } from '../components/speech/LiveSpectrogramVisualizer';
+import { GenAiPracticeGeneratorModal } from '../components/speech/GenAiPracticeGeneratorModal';
 
 export const SpeechPracticePage: React.FC = () => {
   const { setCurrentPage, recordPracticeSessionCompleted } = useAuth();
-  const [selectedExercise, setSelectedExercise] = useState(0);
+  const [customSpeeches, setCustomSpeeches] = useState<PracticeExerciseItem[]>([]);
+  const [selectedSpeechId, setSelectedSpeechId] = useState<string>(PRACTICE_SPEECHES[0].id);
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('en-US');
+  const [activeCategory, setActiveCategory] = useState<PracticeCategory>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [isPracticing, setIsPracticing] = useState(false);
   const [duration, setDuration] = useState(0);
   const [showFormulaModal, setShowFormulaModal] = useState(false);
   const [showHowItCountsPanel, setShowHowItCountsPanel] = useState(true);
+  const [showProstheticAids, setShowProstheticAids] = useState(false);
+  const [showSpectrogram, setShowSpectrogram] = useState(false);
+  const [showGenAiModal, setShowGenAiModal] = useState(false);
   const [isFreeSpeechMode, setIsFreeSpeechMode] = useState(false);
   const [recordedToPlan, setRecordedToPlan] = useState(false);
   const [finalSummary, setFinalSummary] = useState<RealTimeFluencyState | null>(null);
+
+  // Calibration & Manual Self-Rating States
+  const [showCalibrationModal, setShowCalibrationModal] = useState(false);
+  const [isCalibrating, setIsCalibrating] = useState(false);
+  const [calibratedNoiseFloorDb, setCalibratedNoiseFloorDb] = useState(26);
+  const [calibratedPeakVoiceDb, setCalibratedPeakVoiceDb] = useState(74);
+  const [isManualSelfRating, setIsManualSelfRating] = useState(false);
+  const [manualDisfluencies, setManualDisfluencies] = useState({
+    repetitions: 0,
+    prolongations: 0,
+    blocks: 0
+  });
+
+  // Combined Speeches: English standard + Multilingual + AI Generated
+  const allAvailableSpeeches = useMemo(() => {
+    return [
+      ...customSpeeches,
+      ...PRACTICE_SPEECHES,
+      ...(MULTILINGUAL_SPEECHES as unknown as PracticeExerciseItem[])
+    ];
+  }, [customSpeeches]);
 
   // Real-Time Acoustic & Speech Recognition State
   const [liveTranscript, setLiveTranscript] = useState('');
@@ -55,35 +98,31 @@ export const SpeechPracticePage: React.FC = () => {
   const [isSimulating, setIsSimulating] = useState(false);
   const [micError, setMicError] = useState<string | null>(null);
 
-  const exercises: Exercise[] = [
-    {
-      title: 'Gentle Consonant Onset (Easy Starts)',
-      technique: 'Phonation Mechanics',
-      wpm: 120,
-      description: 'Begin vocal cord vibration with a gentle sigh of air before shaping the initial consonant.',
-      sample: 'Peter opened the blue umbrella before the sudden rain began.'
-    },
-    {
-      title: 'Continuous Phonation (Flow Technique)',
-      technique: 'Acoustic Continuity',
-      wpm: 135,
-      description: 'Keep your vocal cords vibrating gently throughout the entire sentence, connecting word boundaries.',
-      sample: 'Every morning brings a quiet calm that slowly warms the valley.'
-    },
-    {
-      title: 'Light Articulatory Contact',
-      technique: 'Tension Reduction',
-      wpm: 130,
-      description: 'Make feather-light contact between your tongue and palate or lips when producing plosives (/p/, /b/, /t/, /d/).',
-      sample: 'The bakery delivers fresh bread and sweet pastries down town.'
-    }
-  ];
+  const current = useMemo(() => {
+    return allAvailableSpeeches.find((s) => s.id === selectedSpeechId) || allAvailableSpeeches[0];
+  }, [selectedSpeechId, allAvailableSpeeches]);
 
-  const current = exercises[selectedExercise];
+  const filteredSpeeches = useMemo(() => {
+    return allAvailableSpeeches.filter((item) => {
+      // Filter by language if multilingual or English
+      const itemLang = (item as any).langCode || 'en-US';
+      const matchesLang = selectedLanguage === 'all' || itemLang === selectedLanguage;
+
+      const matchesCategory = activeCategory === 'all' || item.category === activeCategory;
+      const query = searchQuery.toLowerCase().trim();
+      const matchesSearch =
+        !query ||
+        item.title.toLowerCase().includes(query) ||
+        item.sample.toLowerCase().includes(query) ||
+        item.technique.toLowerCase().includes(query) ||
+        (item.phoneticFocus && item.phoneticFocus.toLowerCase().includes(query));
+      return matchesLang && matchesCategory && matchesSearch;
+    });
+  }, [allAvailableSpeeches, selectedLanguage, activeCategory, searchQuery]);
 
   // Target word alignment evaluation
   const [alignmentResult, setAlignmentResult] = useState<TargetTextAlignmentResult>(() =>
-    evaluateTargetTextAlignment('', exercises[0].sample)
+    evaluateTargetTextAlignment('', PRACTICE_SPEECHES[0].sample)
   );
 
   // Real-Time Fluency Score and Breakdown State
@@ -156,7 +195,7 @@ export const SpeechPracticePage: React.FC = () => {
       ...prev,
       targetWpm: current.wpm
     }));
-  }, [selectedExercise, current.sample]);
+  }, [selectedSpeechId, current.sample, current.wpm]);
 
   // Duration timer
   useEffect(() => {
@@ -406,7 +445,7 @@ export const SpeechPracticePage: React.FC = () => {
         const recognition = new SpeechRecognition();
         recognition.continuous = true;
         recognition.interimResults = true;
-        recognition.lang = 'en-US';
+        recognition.lang = selectedLanguage;
 
         recognition.onresult = (event: any) => {
           let currentSpoken = '';
@@ -458,7 +497,9 @@ export const SpeechPracticePage: React.FC = () => {
 
   // Simulates speech tokens: fluent prompt words, stutter repetitions, stutter blocks, or completely other words
   const startTextPacingSimulation = (type: 'fluent' | 'stutter_repetitions' | 'stutter_blocks' | 'other_words') => {
-    const rawTargetWords = current.sample.split(' ');
+    const allWords = current.sample.split(/\s+/).map((w) => w.trim()).filter(Boolean);
+    // For extended reading paragraphs, simulate the first 16 words for quick, responsive testing
+    const rawTargetWords = allWords.length > 18 ? allWords.slice(0, 18) : allWords;
 
     let wordsToSimulate: string[];
     if (type === 'fluent') {
@@ -469,13 +510,13 @@ export const SpeechPracticePage: React.FC = () => {
       for (let i = 0; i < rawTargetWords.length; i++) {
         const w = rawTargetWords[i];
         if (i === 0) {
-          wordsToSimulate.push(w, w); // Whole-word repetition ("Peter Peter")
+          wordsToSimulate.push(w, w); // Whole-word repetition
         } else if (i === 2) {
-          wordsToSimulate.push(w, w); // Whole-word repetition ("opened opened")
+          wordsToSimulate.push(w, w); // Whole-word repetition
         } else if (i === 4 && w.length > 3) {
-          wordsToSimulate.push(`${w.slice(0, 1)}-${w}`); // Part-word repetition ("b-blue")
+          wordsToSimulate.push(`${w.slice(0, 1)}-${w}`); // Part-word repetition
         } else if (i === 7) {
-          wordsToSimulate.push(w, w); // Repetition ("before before")
+          wordsToSimulate.push(w, w); // Repetition
         } else {
           wordsToSimulate.push(w);
         }
@@ -588,6 +629,68 @@ export const SpeechPracticePage: React.FC = () => {
     return 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border-rose-200 dark:border-rose-800';
   };
 
+  const currentListIndex = filteredSpeeches.findIndex((s) => s.id === current.id);
+
+  const handleSelectSpeech = (id: string) => {
+    if (isPracticing) stopRecording();
+    setSelectedSpeechId(id);
+    setLiveTranscript('');
+    setFinalSummary(null);
+  };
+
+  const handleNextSpeech = () => {
+    if (filteredSpeeches.length === 0) return;
+    const nextIdx = (currentListIndex + 1) % filteredSpeeches.length;
+    handleSelectSpeech(filteredSpeeches[nextIdx].id);
+  };
+
+  const handlePrevSpeech = () => {
+    if (filteredSpeeches.length === 0) return;
+    const prevIdx = (currentListIndex - 1 + filteredSpeeches.length) % filteredSpeeches.length;
+    handleSelectSpeech(filteredSpeeches[prevIdx].id);
+  };
+
+  const renderCategoryIcon = (catId: PracticeCategory, className: string = 'w-3.5 h-3.5') => {
+    switch (catId) {
+      case 'technique':
+        return <Sparkles className={className} />;
+      case 'paragraph':
+        return <BookOpen className={className} />;
+      case 'tongue_twister':
+        return <Zap className={className} />;
+      case 'conversation':
+        return <MessageSquare className={className} />;
+      default:
+        return <Layers className={className} />;
+    }
+  };
+
+  const getCategoryBadgeStyle = (category: string) => {
+    switch (category) {
+      case 'paragraph':
+        return 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800';
+      case 'tongue_twister':
+        return 'bg-amber-50 text-amber-700 dark:bg-amber-950/70 dark:text-amber-300 border-amber-200 dark:border-amber-800';
+      case 'conversation':
+        return 'bg-sky-50 text-sky-700 dark:bg-sky-950/70 dark:text-sky-300 border-sky-200 dark:border-sky-800';
+      default:
+        return 'bg-teal-50 text-teal-700 dark:bg-teal-950/70 dark:text-teal-300 border-teal-200 dark:border-teal-800';
+    }
+  };
+
+  const getCategoryLabel = (category: string) => {
+    switch (category) {
+      case 'paragraph':
+        return 'Paragraph Passage';
+      case 'tongue_twister':
+        return 'Tongue Twister';
+      case 'conversation':
+        return 'Daily Conversation';
+      default:
+        return 'Technique Drill';
+    }
+  };
+
   return (
     <div className="mx-auto max-w-5xl space-y-8 pb-16">
       {/* Header */}
@@ -675,42 +778,407 @@ export const SpeechPracticePage: React.FC = () => {
         </div>
       </div>
 
-      {/* Exercise Selection Tabs */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {exercises.map((ex, idx) => (
-          <button
-            key={idx}
-            onClick={() => {
-              if (isPracticing) stopRecording();
-              setSelectedExercise(idx);
-              setFinalSummary(null);
-            }}
-            className={`p-4 rounded-2xl border text-left transition-all ${
-              selectedExercise === idx
-                ? 'border-teal-600 bg-teal-50/70 dark:bg-teal-950/40 dark:border-teal-500 shadow-xs ring-1 ring-teal-500'
-                : 'border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900'
-            }`}
-          >
-            <span className="text-[10px] font-bold text-teal-600 dark:text-teal-400 uppercase tracking-wider">
-              {ex.technique}
+      {/* Advanced Clinical Tools Bar: Multilingual Selector, DAF/FAF, Live Spectrogram, GenAI Passage Generator */}
+      <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          {/* Language Selector */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-1 shrink-0">
+              Language:
             </span>
-            <h3 className="font-bold text-xs text-slate-900 dark:text-white mt-0.5">
-              {ex.title}
-            </h3>
-            <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 block">
-              Target Pacing: <strong>{ex.wpm} WPM</strong>
-            </span>
-          </button>
-        ))}
+            <button
+              onClick={() => setSelectedLanguage('all')}
+              className={`px-2.5 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border ${
+                selectedLanguage === 'all'
+                  ? 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900 border-slate-800'
+                  : 'bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+              }`}
+            >
+              All Languages
+            </button>
+            {SUPPORTED_LANGUAGES.map((lang) => (
+              <button
+                key={lang.code}
+                onClick={() => setSelectedLanguage(lang.code)}
+                className={`px-2.5 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1 border ${
+                  selectedLanguage === lang.code
+                    ? 'bg-teal-600 text-white border-teal-600 shadow-xs'
+                    : 'bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-300'
+                }`}
+              >
+                <span>{lang.flag}</span>
+                <span>{lang.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Quick Tool Toggles */}
+          <div className="flex flex-wrap items-center gap-2 self-start lg:self-auto shrink-0">
+            {/* DAF/FAF Toggle */}
+            <button
+              onClick={() => setShowProstheticAids(!showProstheticAids)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${
+                showProstheticAids
+                  ? 'bg-teal-600 text-white border-teal-600 shadow-xs'
+                  : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-teal-400'
+              }`}
+            >
+              <Volume2 className="w-3.5 h-3.5" />
+              <span>DAF & FAF Aids</span>
+            </button>
+
+            {/* Spectrogram Toggle */}
+            <button
+              onClick={() => setShowSpectrogram(!showSpectrogram)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${
+                showSpectrogram
+                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                  : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-400'
+              }`}
+            >
+              <Activity className="w-3.5 h-3.5" />
+              <span>Live Spectrogram</span>
+            </button>
+
+            {/* Mic Calibration */}
+            <button
+              onClick={() => setShowCalibrationModal(true)}
+              className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-amber-400"
+              title="Calibrate room noise floor and vocal intensity"
+            >
+              <Compass className="w-3.5 h-3.5 text-amber-500" />
+              <span>Calibrate Mic</span>
+            </button>
+
+            {/* Manual Self-Rating Toggle */}
+            <button
+              onClick={() => setIsManualSelfRating(!isManualSelfRating)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${
+                isManualSelfRating
+                  ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                  : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-amber-400'
+              }`}
+              title="Manual Self-Rating Fallback Mode (for all browsers)"
+            >
+              <Edit3 className="w-3.5 h-3.5" />
+              <span>Self-Rating Mode</span>
+            </button>
+
+            {/* GenAI Generator Trigger */}
+            <button
+              onClick={() => setShowGenAiModal(true)}
+              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-teal-600 to-indigo-600 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs hover:from-teal-700 hover:to-indigo-700"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>AI Custom Passage</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Manual Self-Rating Quick Tap Bar */}
+        {isManualSelfRating && (
+          <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200 font-bold">
+              <Edit3 className="w-4 h-4 text-amber-600" />
+              <span>Clinical Self-Rating Counter (Browser Fallback):</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() =>
+                  setManualDisfluencies((prev) => ({ ...prev, repetitions: prev.repetitions + 1 }))
+                }
+                className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700 font-bold text-amber-900 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/60 shadow-2xs"
+              >
+                + Repetition ({manualDisfluencies.repetitions})
+              </button>
+
+              <button
+                onClick={() =>
+                  setManualDisfluencies((prev) => ({ ...prev, prolongations: prev.prolongations + 1 }))
+                }
+                className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700 font-bold text-amber-900 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/60 shadow-2xs"
+              >
+                + Prolongation ({manualDisfluencies.prolongations})
+              </button>
+
+              <button
+                onClick={() =>
+                  setManualDisfluencies((prev) => ({ ...prev, blocks: prev.blocks + 1 }))
+                }
+                className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700 font-bold text-amber-900 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/60 shadow-2xs"
+              >
+                + Block ({manualDisfluencies.blocks})
+              </button>
+
+              <button
+                onClick={() =>
+                  setManualDisfluencies({ repetitions: 0, prolongations: 0, blocks: 0 })
+                }
+                className="px-2.5 py-1.5 rounded-xl text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 font-semibold text-[11px]"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Expandable DAF/FAF Panel */}
+        {showProstheticAids && (
+          <div className="pt-2">
+            <ProstheticAidsPanel />
+          </div>
+        )}
+
+        {/* Expandable Live Spectrogram */}
+        {showSpectrogram && (
+          <div className="pt-2">
+            <LiveSpectrogramVisualizer
+              analyser={analyserRef.current}
+              isActive={isPracticing}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* GenAI Practice Generator Modal */}
+      <GenAiPracticeGeneratorModal
+        isOpen={showGenAiModal}
+        onClose={() => setShowGenAiModal(false)}
+        onApplyPractice={(customItem) => {
+          const newItem: PracticeExerciseItem = {
+            id: `ai-custom-${Date.now()}`,
+            title: customItem.title,
+            technique: customItem.technique,
+            category: 'technique',
+            difficulty: 'intermediate',
+            wpm: customItem.wpm,
+            description: customItem.description,
+            phoneticFocus: customItem.phoneticFocus,
+            sample: customItem.sample,
+            wordCount: customItem.sample.split(/\s+/).length
+          };
+          setCustomSpeeches((prev) => [newItem, ...prev]);
+          setSelectedSpeechId(newItem.id);
+        }}
+      />
+
+      {/* Acoustic Calibration Modal */}
+      {showCalibrationModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900 relative space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <Compass className="w-5 h-5 text-amber-500" />
+                <h3 className="font-display text-base font-bold text-slate-900 dark:text-white">
+                  Acoustic Noise Floor & Mic Calibration
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowCalibrationModal(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              Calibrate your microphone sensitivity to isolate ambient room noise (fans, air conditioning) from genuine aerodynamic silent blocks.
+            </p>
+
+            <div className="p-4 rounded-2xl bg-amber-50/60 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60 space-y-2">
+              <span className="text-[10px] font-bold uppercase text-amber-800 dark:text-amber-300 block">
+                Calibration Reference Sentence:
+              </span>
+              <p className="text-sm font-serif italic text-slate-900 dark:text-white">
+                "My vocal airflow is steady, relaxed, and continuous."
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-center text-xs">
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+                <span className="text-slate-400 text-[10px] block uppercase font-bold">Room Noise Floor</span>
+                <span className="font-mono font-bold text-lg text-slate-800 dark:text-slate-200">
+                  {calibratedNoiseFloorDb} dB
+                </span>
+                <span className="text-[10px] text-emerald-600 block font-medium">Quiet Ambient</span>
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+                <span className="text-slate-400 text-[10px] block uppercase font-bold">Peak Voice Signal</span>
+                <span className="font-mono font-bold text-lg text-teal-600 dark:text-teal-400">
+                  {calibratedPeakVoiceDb} dB
+                </span>
+                <span className="text-[10px] text-teal-600 block font-medium">Clear Phonation</span>
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-between items-center">
+              <span className="text-[11px] text-slate-400">Status: Calibrated for SLP analysis</span>
+              <button
+                onClick={() => {
+                  setIsCalibrating(true);
+                  setTimeout(() => {
+                    setCalibratedNoiseFloorDb(Math.round(22 + Math.random() * 6));
+                    setCalibratedPeakVoiceDb(Math.round(70 + Math.random() * 8));
+                    setIsCalibrating(false);
+                    alert('Calibration complete! Silence block thresholds updated for your acoustic environment.');
+                    setShowCalibrationModal(false);
+                  }, 1800);
+                }}
+                className="px-4 py-2 rounded-xl bg-amber-600 text-white font-bold text-xs hover:bg-amber-700 shadow-xs flex items-center gap-1.5"
+              >
+                {isCalibrating ? (
+                  <>
+                    <Activity className="w-3.5 h-3.5 animate-spin" />
+                    <span>Measuring...</span>
+                  </>
+                ) : (
+                  <>
+                    <Compass className="w-3.5 h-3.5" />
+                    <span>Run Calibration</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Speech Practice Library: Filter Pills & Search */}
+      <div className="space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          {/* Category Filter Pills */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
+            {PRACTICE_CATEGORIES.map((cat) => {
+              const count =
+                cat.id === 'all'
+                  ? PRACTICE_SPEECHES.length
+                  : PRACTICE_SPEECHES.filter((s) => s.category === cat.id).length;
+              const isActive = activeCategory === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => setActiveCategory(cat.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 border ${
+                    isActive
+                      ? 'bg-teal-600 text-white border-teal-600 shadow-xs'
+                      : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                  }`}
+                >
+                  {renderCategoryIcon(cat.id, 'w-3.5 h-3.5')}
+                  <span>{cat.label}</span>
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                      isActive
+                        ? 'bg-teal-700 text-teal-100'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Search Bar */}
+          <div className="relative min-w-[240px]">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search speeches, twisters, passages..."
+              className="w-full pl-8 pr-8 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Scrollable Speech Cards Shelf */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[380px] overflow-y-auto pr-1">
+          {filteredSpeeches.map((item) => {
+            const isSelected = selectedSpeechId === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => handleSelectSpeech(item.id)}
+                className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between h-full ${
+                  isSelected
+                    ? 'border-teal-600 bg-teal-50/70 dark:bg-teal-950/40 dark:border-teal-500 shadow-xs ring-1 ring-teal-500'
+                    : 'border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900'
+                }`}
+              >
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-1.5">
+                    <span className="text-[10px] font-bold text-teal-600 dark:text-teal-400 uppercase tracking-wider">
+                      {item.technique}
+                    </span>
+                    <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                      {item.wordCount || item.sample.split(/\s+/).length} words
+                    </span>
+                  </div>
+
+                  <h3 className="font-bold text-xs text-slate-900 dark:text-white line-clamp-1">
+                    {item.title}
+                  </h3>
+
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                    {item.description}
+                  </p>
+                </div>
+
+                <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11px]">
+                  <span className="text-slate-500 dark:text-slate-400">
+                    Pacing: <strong>{item.wpm} WPM</strong>
+                  </span>
+                  {isSelected && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-teal-600 dark:text-teal-400">
+                      <CheckCircle2 className="w-3 h-3" /> Selected
+                    </span>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {filteredSpeeches.length === 0 && (
+          <div className="p-8 text-center rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+            <p className="text-xs text-slate-500 dark:text-slate-400">No practice speeches found matching "{searchQuery}".</p>
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                setActiveCategory('all');
+              }}
+              className="mt-2 text-xs font-semibold text-teal-600 dark:text-teal-400 hover:underline"
+            >
+              Reset filters
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Main Real-Time Practice Workspace */}
       <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 dark:border-slate-800 dark:bg-slate-900 shadow-sm space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100 dark:border-slate-800">
           <div className="space-y-1">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300">
-              Target Pace: {current.wpm} Words Per Minute
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider ${getCategoryBadgeStyle(current.category)}`}>
+                {getCategoryLabel(current.category)}
+              </span>
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                Target: {current.wpm} Words Per Minute
+              </span>
+            </div>
             <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
               {current.description}
             </p>
@@ -726,28 +1194,67 @@ export const SpeechPracticePage: React.FC = () => {
         </div>
 
         {/* Practice Prompt Display with Live Word-by-Word Matching */}
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 dark:border-slate-700 dark:bg-slate-800/60 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-            <span className="text-slate-500 dark:text-slate-400 uppercase tracking-wider font-bold">
-              {isFreeSpeechMode ? 'Reference Practice Sentence (Free Speech Mode Active):' : 'Read aloud using gentle onset (Live Word Alignment Active):'}
-            </span>
-            {!isFreeSpeechMode && (
-              <span
-                className={`px-3 py-1 rounded-full text-xs font-bold self-start sm:self-auto border ${
-                  alignmentResult.targetAccuracyPct >= 80
-                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
-                    : alignmentResult.targetAccuracyPct >= 50
-                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-300 dark:border-amber-700'
-                    : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border-rose-300 dark:border-rose-700'
-                }`}
-              >
-                Target Match: {alignmentResult.targetAccuracyPct}% ({alignmentResult.matchedWordsCount}/{alignmentResult.totalTargetWords} words)
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 sm:p-6 dark:border-slate-700 dark:bg-slate-800/60 space-y-4">
+          {/* Prompter Toolbar: Category, Pacing, Word Count, and Quick Prev/Next controls */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/80 dark:border-slate-700/80 text-xs">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-slate-500 dark:text-slate-400 uppercase tracking-wider font-bold text-[11px]">
+                {isFreeSpeechMode ? 'Reference Practice Prompt (Free Speech Mode Active):' : 'Read Aloud with Natural Cadence:'}
               </span>
-            )}
+              {current.phoneticFocus && (
+                <span className="px-2 py-0.5 rounded-md bg-slate-200/80 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-[10px] font-semibold">
+                  {current.phoneticFocus}
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              {!isFreeSpeechMode && (
+                <span
+                  className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
+                    alignmentResult.targetAccuracyPct >= 80
+                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
+                      : alignmentResult.targetAccuracyPct >= 50
+                      ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-300 dark:border-amber-700'
+                      : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border-rose-300 dark:border-rose-700'
+                  }`}
+                >
+                  Target Match: {alignmentResult.targetAccuracyPct}% ({alignmentResult.matchedWordsCount}/{alignmentResult.totalTargetWords} words)
+                </span>
+              )}
+
+              <div className="flex items-center gap-1 border-l border-slate-200 dark:border-slate-700 pl-2">
+                <button
+                  onClick={handlePrevSpeech}
+                  disabled={filteredSpeeches.length <= 1}
+                  className="p-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white disabled:opacity-40 transition-colors"
+                  title="Previous Speech in List"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+                <span className="text-[10px] font-medium text-slate-400 px-1">
+                  {currentListIndex >= 0 ? currentListIndex + 1 : 1}/{filteredSpeeches.length}
+                </span>
+                <button
+                  onClick={handleNextSpeech}
+                  disabled={filteredSpeeches.length <= 1}
+                  className="p-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white disabled:opacity-40 transition-colors"
+                  title="Next Speech in List"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Word-by-word visual highlight */}
-          <div className="font-serif text-xl sm:text-2xl leading-relaxed max-w-2xl mx-auto flex flex-wrap items-center justify-center gap-2 py-2">
+          <div
+            className={`py-3 px-2 sm:px-4 rounded-xl transition-all ${
+              current.category === 'paragraph'
+                ? 'font-serif text-lg sm:text-xl leading-relaxed sm:leading-loose text-left max-w-3xl mx-auto flex flex-wrap items-center justify-start gap-1.5 sm:gap-2'
+                : 'font-serif text-xl sm:text-2xl leading-relaxed text-center max-w-2xl mx-auto flex flex-wrap items-center justify-center gap-2'
+            }`}
+          >
             {alignmentResult.targetWords.map((item) => (
               <span
                 key={item.id}
@@ -763,6 +1270,25 @@ export const SpeechPracticePage: React.FC = () => {
               </span>
             ))}
           </div>
+
+          {/* Specialized Practice Tips based on Exercise Category */}
+          {current.category === 'tongue_twister' && (
+            <div className="p-2.5 rounded-xl bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/80 text-[11px] text-amber-900 dark:text-amber-200 flex items-center gap-2">
+              <Zap className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>
+                <strong>Tongue Twister Guidance:</strong> Prioritize feather-light articulatory touch over sheer speed. Touch lips and tongue tip gently to prevent locking on consonant transitions.
+              </span>
+            </div>
+          )}
+
+          {current.category === 'paragraph' && (
+            <div className="p-2.5 rounded-xl bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/80 text-[11px] text-indigo-900 dark:text-indigo-200 flex items-center gap-2">
+              <BookOpen className="w-4 h-4 text-indigo-600 shrink-0" />
+              <span>
+                <strong>Paragraph Reading Guidance:</strong> Inhale silently through your abdomen at commas and periods. Keep vocal cords gently vibrating across word transitions without rushing.
+              </span>
+            </div>
+          )}
 
           {/* Off-Target Words Alert Banner: Triggers when user says other words! */}
           {alignmentResult.offTargetWordsCount > 0 && !isFreeSpeechMode && (

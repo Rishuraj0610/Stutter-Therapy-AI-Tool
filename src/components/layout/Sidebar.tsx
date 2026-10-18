@@ -14,6 +14,9 @@ import {
   LogOut,
   HeartPulse,
   Flame,
+  Gamepad2,
+  FileAudio,
+  Activity,
   ChevronsLeft
 } from 'lucide-react';
 
@@ -29,6 +32,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose, onTog
   const patientNavItems = [
     { id: 'dashboard', label: 'Home / Dashboard', icon: Home },
     { id: 'speech_practice', label: 'Speech Practice', icon: Mic },
+    { id: 'pediatric', label: 'Pediatric Playground', icon: Gamepad2 },
+    { id: 'forensic_audio', label: 'Forensic Audio ML', icon: FileAudio },
+    { id: 'biofeedback_wearable', label: 'Wearable Biofeedback', icon: Activity },
     { id: 'ai_counselling', label: 'AI Counsellor', icon: MessageSquareHeart },
     { id: 'exercises', label: 'Exercise Library', icon: Dumbbell },
     { id: 'daily_plan', label: 'Daily Plan', icon: CalendarCheck },
@@ -42,6 +48,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose, onTog
     { id: 'admin', label: 'Doctor Caseload', icon: ShieldCheck },
     { id: 'doctors', label: 'Therapist Directory', icon: Stethoscope },
     { id: 'speech_practice', label: 'Speech Diagnostic Lab', icon: Mic },
+    { id: 'forensic_audio', label: 'Forensic Audio Lab', icon: FileAudio },
+    { id: 'biofeedback_wearable', label: 'Patient Biofeedback', icon: Activity },
+    { id: 'pediatric', label: 'Pediatric Mode', icon: Gamepad2 },
     { id: 'exercises', label: 'Exercise Library', icon: Dumbbell },
     { id: 'about', label: 'Clinical Protocols', icon: BookOpen },
     { id: 'profile', label: 'Clinician Settings', icon: User }

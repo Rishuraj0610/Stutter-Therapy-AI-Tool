@@ -297,28 +297,39 @@ export const MLSpeechModelPage: React.FC = () => {
   return (
     <div className="mx-auto max-w-6xl space-y-8 pb-16">
       {/* Top Header Card */}
-      <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-8">
+      <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-8 space-y-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-2 rounded-full bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-700 dark:bg-teal-950/60 dark:text-teal-300">
-              <Cpu className="w-3.5 h-3.5 text-teal-600" />
-              Machine Learning Acoustic Model • Wav2Vec2 + StutterNet
+            <div className="inline-flex items-center gap-2 rounded-full bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 px-3 py-1 text-xs font-semibold text-amber-800 dark:text-amber-300">
+              <Cpu className="w-3.5 h-3.5 text-amber-600" />
+              Simulated / Experimental Research Bench • Wav2Vec2 + StutterNet
             </div>
             <h1 className="font-display text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">
               Clinical Speech Disfluency Analyzer
             </h1>
             <p className="max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-              Real-time multi-band acoustic extraction evaluating fundamental frequency, vocal jitter, shimmer, phoneme prolongations, repetitions, and silent blocks.
+              Multi-band acoustic feature extraction evaluating fundamental pitch (F0), vocal jitter, shimmer, phoneme prolongations, syllable repetitions, and silent aerodynamic blocks.
             </p>
           </div>
 
           <button
             onClick={() => setCurrentPage('doctors')}
-            className="inline-flex items-center gap-2 rounded-2xl bg-teal-600 px-5 py-3 text-xs font-bold text-white shadow-md hover:bg-teal-700 transition-all self-start sm:self-auto"
+            className="inline-flex items-center gap-2 rounded-2xl bg-teal-600 px-5 py-3 text-xs font-bold text-white shadow-md hover:bg-teal-700 transition-all self-start sm:self-auto shrink-0"
           >
             <Stethoscope className="w-4 h-4" />
-            Book Clinical Review
+            Book SLP Clinical Review
           </button>
+        </div>
+
+        {/* Clinical Disclaimer Banner */}
+        <div className="p-3.5 rounded-2xl bg-amber-50/70 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 flex items-start gap-3 text-xs text-amber-900 dark:text-amber-200">
+          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <div className="space-y-0.5">
+            <span className="font-bold">Non-Diagnostic Research Notice:</span>
+            <p className="text-amber-800/90 dark:text-amber-300/90 leading-relaxed">
+              FluencyAI's ML studio provides experimental acoustic estimates to support speech practice self-awareness. These simulated metrics do NOT constitute a medical diagnosis, SLP clinical evaluation, or formal disability rating.
+            </p>
+          </div>
         </div>
       </div>
 
