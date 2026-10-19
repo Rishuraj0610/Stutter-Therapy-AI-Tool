@@ -89,15 +89,14 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const INITIAL_DAILY_TASKS: DailyTask[] = [
+export const INITIAL_DAILY_TASKS: DailyTask[] = [
   {
     id: 'dt-1',
     timeOfDay: 'morning',
     title: '5-Minute Diaphragmatic Breath Anchor',
     category: 'Respiratory Mechanics',
     durationMinutes: 5,
-    completed: true,
-    completedAt: '08:15 AM',
+    completed: false,
     exerciseId: 'breath-1',
     targetRoute: 'speech_practice',
     description: 'Anchor nervous system with gentle diaphragmatic expansion and slow nasal inhalation.'
@@ -136,6 +135,61 @@ const INITIAL_DAILY_TASKS: DailyTask[] = [
     description: 'Reflective chat with AI Speech Counsellor targeting anticipatory speaking tension.'
   }
 ];
+
+export interface UserDataStore {
+  streakDays: number;
+  lastPracticeDate: string;
+  dailyTasks: DailyTask[];
+  practiceSessions: PracticeSession[];
+}
+
+export function createFreshUserData(): UserDataStore {
+  return {
+    streakDays: 0,
+    lastPracticeDate: '',
+    dailyTasks: INITIAL_DAILY_TASKS.map((t) => ({ ...t, completed: false, completedAt: undefined })),
+    practiceSessions: []
+  };
+}
+
+export function getUserDataStorageKey(emailOrId: string): string {
+  const clean = (emailOrId || '').trim().toLowerCase();
+  return `fluency_userdata_${clean}`;
+}
+
+export function loadUserDataForUser(emailOrId: string | undefined): UserDataStore {
+  if (!emailOrId) {
+    return createFreshUserData();
+  }
+  try {
+    const raw = localStorage.getItem(getUserDataStorageKey(emailOrId));
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        return {
+          streakDays: typeof parsed.streakDays === 'number' ? parsed.streakDays : 0,
+          lastPracticeDate: typeof parsed.lastPracticeDate === 'string' ? parsed.lastPracticeDate : '',
+          dailyTasks: Array.isArray(parsed.dailyTasks) && parsed.dailyTasks.length > 0
+            ? parsed.dailyTasks
+            : INITIAL_DAILY_TASKS.map((t) => ({ ...t, completed: false, completedAt: undefined })),
+          practiceSessions: Array.isArray(parsed.practiceSessions) ? parsed.practiceSessions : []
+        };
+      }
+    }
+  } catch (e) {
+    // fallback
+  }
+  return createFreshUserData();
+}
+
+export function saveUserDataForUser(emailOrId: string | undefined, data: UserDataStore): void {
+  if (!emailOrId) return;
+  try {
+    localStorage.setItem(getUserDataStorageKey(emailOrId), JSON.stringify(data));
+  } catch (e) {
+    // fallback
+  }
+}
 
 const INITIAL_SESSIONS: UserSession[] = [
   {
@@ -251,11 +305,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         /* noop */
       }
     }
-    // Check if there is an active account in the registry
-    const accounts = getStoredAccounts();
-    if (accounts.length > 0) {
-      return accounts[0];
-    }
     return null;
   });
 
@@ -296,10 +345,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         /* noop */
       }
     }
-    const accounts = getStoredAccounts();
-    if (accounts.length > 0) {
-      return accounts[0].role === 'therapist' ? 'admin' : 'dashboard';
-    }
     return 'landing';
   });
   const [authSubPage, setAuthSubPage] = useState<string>('login');
@@ -313,62 +358,92 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [remainingInactivitySeconds, setRemainingInactivitySeconds] = useState<number>(60);
   const lastActivityRef = useRef<number>(Date.now());
 
-  // Real-time Streak and Practice tracking
+  // Real-time Streak and Practice tracking - STRICTLY USER-SCOPED
   const [streakDays, setStreakDaysState] = useState<number>(() => {
-    const saved = localStorage.getItem('fluency_streak_v2');
-    if (saved) {
-      const num = parseInt(saved, 10);
-      if (!isNaN(num)) return num;
+    const savedUserRaw = localStorage.getItem('fluency_user');
+    if (savedUserRaw) {
+      try {
+        const parsed = JSON.parse(savedUserRaw);
+        if (parsed?.email) {
+          return loadUserDataForUser(parsed.email).streakDays;
+        }
+      } catch (e) {}
     }
-    return 5;
+    return 0;
   });
 
   const [lastPracticeDate, setLastPracticeDate] = useState<string>(() => {
-    return localStorage.getItem('fluency_last_practice_date_v2') || '';
+    const savedUserRaw = localStorage.getItem('fluency_user');
+    if (savedUserRaw) {
+      try {
+        const parsed = JSON.parse(savedUserRaw);
+        if (parsed?.email) {
+          return loadUserDataForUser(parsed.email).lastPracticeDate;
+        }
+      } catch (e) {}
+    }
+    return '';
   });
 
-  // Real-time Daily Tasks
+  // Real-time Daily Tasks - STRICTLY USER-SCOPED
   const [dailyTasks, setDailyTasks] = useState<DailyTask[]>(() => {
-    const saved = localStorage.getItem('fluency_daily_tasks_v2');
-    if (saved) {
+    const savedUserRaw = localStorage.getItem('fluency_user');
+    if (savedUserRaw) {
       try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      } catch (e) { /* noop */ }
+        const parsed = JSON.parse(savedUserRaw);
+        if (parsed?.email) {
+          return loadUserDataForUser(parsed.email).dailyTasks;
+        }
+      } catch (e) {}
     }
-    return INITIAL_DAILY_TASKS;
+    return INITIAL_DAILY_TASKS.map((t) => ({ ...t, completed: false, completedAt: undefined }));
   });
 
   // Real-time clock updated every second
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
 
-  // Practice Sessions history with real clinical metrics
+  // Practice Sessions history - STRICTLY USER-SCOPED (starts at [] for new users)
   const [practiceSessions, setPracticeSessions] = useState<PracticeSession[]>(() => {
-    const saved = localStorage.getItem('fluency_practice_sessions_v2');
-    if (saved) {
+    const savedUserRaw = localStorage.getItem('fluency_user');
+    if (savedUserRaw) {
       try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        const parsed = JSON.parse(savedUserRaw);
+        if (parsed?.email) {
+          return loadUserDataForUser(parsed.email).practiceSessions;
+        }
       } catch (e) {}
     }
-    return [
-      {
-        id: 'sess-1',
-        userId: 'usr-patient-1',
-        exerciseId: 'grand-1',
-        exerciseTitle: 'Grandfather Passage - ML Speech Lab',
-        recordedAt: 'Today, 2:15 PM',
-        durationSeconds: 42,
-        fluencyScore: 86.4,
-        wpm: 142,
-        disfluencyRate: 4.2,
-        repetitionsCount: 2,
-        prolongationsCount: 1,
-        blocksCount: 1,
-        transcription: 'You wish to know all about my grandfather...'
-      }
-    ];
+    return [];
   });
+
+  // Load respective user data whenever active user changes
+  useEffect(() => {
+    if (user?.email) {
+      const uData = loadUserDataForUser(user.email);
+      setStreakDaysState(uData.streakDays);
+      setLastPracticeDate(uData.lastPracticeDate);
+      setDailyTasks(uData.dailyTasks);
+      setPracticeSessions(uData.practiceSessions);
+    } else {
+      // Unauthenticated state: clean fresh baseline
+      setStreakDaysState(0);
+      setLastPracticeDate('');
+      setDailyTasks(INITIAL_DAILY_TASKS.map((t) => ({ ...t, completed: false, completedAt: undefined })));
+      setPracticeSessions([]);
+    }
+  }, [user?.email]);
+
+  // Persist user-scoped data whenever streak, tasks, or sessions change
+  useEffect(() => {
+    if (user?.email) {
+      saveUserDataForUser(user.email, {
+        streakDays,
+        lastPracticeDate,
+        dailyTasks,
+        practiceSessions
+      });
+    }
+  }, [user?.email, streakDays, lastPracticeDate, dailyTasks, practiceSessions]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -534,7 +609,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         preferredTheme: appTheme,
         fontSize: fontSize,
         baselineDisfluencyRate: targetRole === 'patient' ? 5.8 : undefined,
-        streakDays: 1,
+        streakDays: 0,
         emailVerified: true,
         verificationStatus: 'verified',
         stutterSeverity: targetRole === 'patient' ? 'moderate' : undefined,
@@ -572,6 +647,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('fluency_user', JSON.stringify(targetUser));
     localStorage.setItem('fluency_token', mockToken);
 
+    // Explicitly load this respective user's data into state
+    const personalData = loadUserDataForUser(targetUser.email);
+    setStreakDaysState(personalData.streakDays);
+    setLastPracticeDate(personalData.lastPracticeDate);
+    setDailyTasks(personalData.dailyTasks);
+    setPracticeSessions(personalData.practiceSessions);
+
     // Redirect by role
     if (targetUser.role === 'therapist') {
       setCurrentPage('admin');
@@ -597,6 +679,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('fluency_user', JSON.stringify(authenticatedUser));
       localStorage.setItem('fluency_token', mockToken);
 
+      const personalData = loadUserDataForUser(authenticatedUser.email);
+      setStreakDaysState(personalData.streakDays);
+      setLastPracticeDate(personalData.lastPracticeDate);
+      setDailyTasks(personalData.dailyTasks);
+      setPracticeSessions(personalData.practiceSessions);
+
       if (authenticatedUser.role === 'therapist') {
         setCurrentPage('admin');
       } else {
@@ -607,7 +695,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { success: false, error: 'Invalid 6-digit code. Please check your authenticator app.' };
   };
 
-  // Auth: Registration Flow
+  // Auth: Registration Flow - INITIALIZES CLEAN, BLANK STATE FOR THE RESPECTIVE PERSON
   const registerUser = async (payload: RegisterPayload): Promise<{ success: boolean; message: string; verificationToken?: string }> => {
     const dummyToken = `verify-${Math.random().toString(36).substring(2, 10)}`;
     const isClinician = payload.role === 'therapist';
@@ -623,7 +711,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       preferredTheme: appTheme,
       fontSize: fontSize,
       baselineDisfluencyRate: isClinician ? undefined : 6.2,
-      streakDays: 1,
+      streakDays: 0,
       emailVerified: true,
       verificationStatus: isClinician ? 'pending_verification' : 'verified',
       dpdpConsent: payload.dpdpConsent,
@@ -654,16 +742,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ]
     };
 
+    // Save account into the permanent accounts registry
     saveAccountToRegistry(newUser);
-    setUser(newUser);
-    const mockToken = `jwt-${newUser.role}-${newUser.id}`;
-    setToken(mockToken);
-    localStorage.setItem('fluency_user', JSON.stringify(newUser));
-    localStorage.setItem('fluency_token', mockToken);
+
+    // Initialize fresh empty data store specifically for this new user
+    const freshData = createFreshUserData();
+    saveUserDataForUser(newUser.email, freshData);
+    saveUserDataForUser(newUser.id, freshData);
+
+    try {
+      localStorage.setItem(`fluency_appointments_${newUser.email}`, JSON.stringify([]));
+      localStorage.setItem(`fluency_appointments_${newUser.id}`, JSON.stringify([]));
+      localStorage.setItem(`fluency_plans_${newUser.email}`, JSON.stringify([]));
+      localStorage.setItem(`fluency_plans_${newUser.id}`, JSON.stringify([]));
+    } catch (e) {
+      // fallback
+    }
 
     return {
       success: true,
-      message: 'Registration complete! Welcome to FluencyAI.',
+      message: 'Account created successfully! Please sign in with your credentials.',
       verificationToken: dummyToken
     };
   };
@@ -701,6 +799,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
     setToken(null);
     setPending2FAUser(null);
+    setStreakDaysState(0);
+    setLastPracticeDate('');
+    setDailyTasks(INITIAL_DAILY_TASKS.map((t) => ({ ...t, completed: false, completedAt: undefined })));
+    setPracticeSessions([]);
     localStorage.removeItem('fluency_user');
     localStorage.removeItem('fluency_token');
     setCurrentPage('landing');
@@ -807,7 +909,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           preferredTheme: appTheme,
           fontSize: fontSize,
           baselineDisfluencyRate: 5.6,
-          streakDays: 3,
+          streakDays: 0,
           emailVerified: true,
           verificationStatus: 'verified',
           stutterSeverity: 'moderate',
@@ -825,6 +927,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setToken(mockToken);
       localStorage.setItem('fluency_user', JSON.stringify(patientUser));
       localStorage.setItem('fluency_token', mockToken);
+
+      const pData = loadUserDataForUser(patientUser.email);
+      setStreakDaysState(pData.streakDays);
+      setLastPracticeDate(pData.lastPracticeDate);
+      setDailyTasks(pData.dailyTasks);
+      setPracticeSessions(pData.practiceSessions);
+
       setCurrentPage('dashboard');
     }
   };

@@ -105,8 +105,8 @@ export const AdminTherapistPage: React.FC = () => {
   const defaultMockUsers = [
     {
       id: 'usr-patient-1',
-      fullName: 'Alex Johnson',
-      email: 'alex.patient@fluencyai.org',
+      fullName: 'Jordan Davis',
+      email: 'jordan.davis@fluencycare.org',
       age: 28,
       totalSessions: 18,
       recentPace: 124,

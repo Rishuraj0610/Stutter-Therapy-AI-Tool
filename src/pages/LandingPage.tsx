@@ -16,13 +16,14 @@ import {
 import { DisclaimerNotice } from '../components/common/DisclaimerNotice';
 
 export const LandingPage: React.FC = () => {
-  const { setCurrentPage, login } = useAuth();
+  const { setCurrentPage, isAuthenticated } = useAuth();
 
-  const handleQuickDemo = async (role: 'patient' | 'therapist') => {
-    await login(
-      role === 'therapist' ? 'marcus.vance@speechclinic.org' : 'alex.patient@fluencyai.org',
-      role
-    );
+  const handleStartPractice = () => {
+    if (isAuthenticated) {
+      setCurrentPage('dashboard');
+    } else {
+      setCurrentPage('login');
+    }
   };
 
   return (
@@ -47,7 +48,7 @@ export const LandingPage: React.FC = () => {
 
         <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
           <button
-            onClick={() => handleQuickDemo('patient')}
+            onClick={handleStartPractice}
             className="inline-flex items-center gap-2 rounded-lg bg-teal-700 hover:bg-teal-800 px-6 py-3 text-sm font-semibold text-white shadow-xs transition-colors"
           >
             Start Patient Practice <ArrowRight className="w-4 h-4" />

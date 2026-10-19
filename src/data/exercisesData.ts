@@ -267,7 +267,7 @@ export const INITIAL_EXERCISES: TherapyExercise[] = [
     durationMinutes: 8,
     promptScenarios: [
       'Host: "Let us go around the virtual room and share a quick 1-sentence intro!"',
-      'Your turn: "Hello everyone, my name is Alex, and I am excited to collaborate on this project together."'
+      'Your turn: "Hello everyone, my name is Morgan, and I am excited to collaborate on this project together."'
     ],
     instructions: [
       'Keep your hands open and relax your shoulder blades down.',

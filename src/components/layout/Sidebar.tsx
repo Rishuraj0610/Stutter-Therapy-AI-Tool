@@ -164,7 +164,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose, onTog
               />
               <div className="truncate text-left">
                 <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate leading-tight">
-                  {user?.fullName || 'Alex Johnson'}
+                  {user?.fullName || (user?.email ? user.email.split('@')[0] : 'My Account')}
                 </p>
                 <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
                   {user?.role === 'therapist' ? 'Clinician' : 'Active Patient'}

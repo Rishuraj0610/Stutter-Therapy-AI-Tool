@@ -15,7 +15,7 @@ export const SuperbillModal: React.FC<SuperbillModalProps> = ({
   isOpen,
   onClose,
   user,
-  patientName = 'Alex Johnson',
+  patientName = '',
   disfluencyBaseline = 8.4,
   currentDisfluency = 3.6
 }) => {
@@ -92,10 +92,10 @@ export const SuperbillModal: React.FC<SuperbillModalProps> = ({
             <div>
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Patient Details</span>
               <h4 className="font-bold text-sm text-slate-900 dark:text-white print:text-black mt-1">
-                {patientName || user?.fullName || 'Alex Johnson'}
+                {patientName || user?.fullName || (user?.email ? user.email.split('@')[0] : 'Patient')}
               </h4>
-              <p className="text-xs text-slate-600 dark:text-slate-400 print:text-slate-700">DOB: 10/14/1996 | Sex: M</p>
-              <p className="text-xs text-slate-600 dark:text-slate-400 print:text-slate-700">Email: {user?.email || 'alex.patient@fluencyai.org'}</p>
+              <p className="text-xs text-slate-600 dark:text-slate-400 print:text-slate-700">DOB: {user?.dateOfBirth || '10/14/1996'} | Sex: {user?.role === 'therapist' ? 'Clinician' : 'Patient'}</p>
+              <p className="text-xs text-slate-600 dark:text-slate-400 print:text-slate-700">Email: {user?.email || 'patient@fluencyai.org'}</p>
             </div>
             <div>
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Insurance & Authorization</span>

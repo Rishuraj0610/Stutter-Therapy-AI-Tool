@@ -21,7 +21,24 @@ import {
 } from 'lucide-react';
 
 export const DashboardPage: React.FC = () => {
-  const { user, setCurrentPage, streakDays, dailyTasks, toggleDailyTask, currentTime } = useAuth();
+  const { user, setCurrentPage, streakDays, dailyTasks, toggleDailyTask, currentTime, practiceSessions } = useAuth();
+
+  const userAppointments = React.useMemo(() => {
+    if (user?.email) {
+      try {
+        const stored = localStorage.getItem(`fluency_appointments_${user.email.toLowerCase()}`);
+        if (stored) return JSON.parse(stored);
+      } catch (e) {}
+    }
+    return [];
+  }, [user?.email]);
+
+  const hasSessions = practiceSessions && practiceSessions.length > 0;
+  const avgFluency = hasSessions
+    ? (practiceSessions.reduce((acc, s) => acc + s.fluencyScore, 0) / practiceSessions.length).toFixed(1)
+    : '85.0';
+  const latestWpm = hasSessions && practiceSessions[0]?.wpm ? practiceSessions[0].wpm : 110;
+  const nextApt = userAppointments && userAppointments.length > 0 ? userAppointments[0] : null;
 
   const quickServices = [
     {
@@ -136,7 +153,7 @@ export const DashboardPage: React.FC = () => {
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
-              Welcome back, {user?.fullName || 'Alex'} 👋
+              Welcome back, {user?.fullName?.split(' ')[0] || (user?.email ? user.email.split('@')[0] : 'Friend')} 👋
             </h1>
 
             <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
@@ -174,10 +191,10 @@ export const DashboardPage: React.FC = () => {
                 Weekly Practice Streak
               </span>
               <p className="text-xl font-bold text-slate-900 dark:text-white">
-                {streakDays || 5} Days Consistent
+                {streakDays} {streakDays === 1 ? 'Day' : 'Days'} Consistent
               </p>
               <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium mt-0.5">
-                On track for weekly goal
+                {streakDays > 0 ? 'On track for weekly goal' : 'Start your first practice today'}
               </p>
             </div>
           </div>
@@ -384,6 +401,7 @@ export const DashboardPage: React.FC = () => {
         </section>
 
         {/* Your Speech Therapist */}
+        {/* Your Speech Therapist */}
         <section
           id="assigned-therapist"
           aria-label="Speech Clinician"
@@ -400,28 +418,47 @@ export const DashboardPage: React.FC = () => {
               </span>
             </div>
 
-            <div className="flex items-center gap-3.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700">
-              <img
-                src="https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=120&auto=format&fit=crop&q=80"
-                alt="Dr. Marcus Vance"
-                className="h-12 w-12 rounded-lg object-cover border border-slate-200 dark:border-slate-700"
-              />
-              <div>
-                <h4 className="font-bold text-sm text-slate-900 dark:text-white">
-                  Dr. Marcus Vance, Ph.D., CCC-SLP
-                </h4>
-                <p className="text-xs text-teal-700 dark:text-teal-400 font-medium">
-                  Board-Certified Specialist in Fluency (BCS-F)
-                </p>
-                <p className="text-[11px] text-slate-500 mt-0.5">
-                  Next Appointment: <strong className="text-slate-700 dark:text-slate-300">Tuesday, 10:30 AM</strong>
-                </p>
+            {nextApt ? (
+              <div className="flex items-center gap-3.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700">
+                <img
+                  src={nextApt.doctorAvatar || "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=120&auto=format&fit=crop&q=80"}
+                  alt={nextApt.doctorName}
+                  className="h-12 w-12 rounded-lg object-cover border border-slate-200 dark:border-slate-700"
+                />
+                <div>
+                  <h4 className="font-bold text-sm text-slate-900 dark:text-white">
+                    {nextApt.doctorName}
+                  </h4>
+                  <p className="text-xs text-teal-700 dark:text-teal-400 font-medium">
+                    Confirmed Telehealth Session
+                  </p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Appointment: <strong className="text-slate-700 dark:text-slate-300">{nextApt.date} at {nextApt.timeSlot}</strong>
+                  </p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-teal-100 dark:bg-teal-950/60 text-teal-700 dark:text-teal-400 flex items-center justify-center shrink-0">
+                  <Stethoscope className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-xs text-slate-900 dark:text-white">
+                    No Consultations Scheduled
+                  </h4>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Book a 1-on-1 tele-evaluation with a certified SLP.
+                  </p>
+                </div>
+              </div>
+            )}
 
             <div className="p-3 rounded-lg bg-teal-50/50 border border-teal-100 dark:bg-teal-950/30 dark:border-teal-900/40 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
               <strong className="text-teal-800 dark:text-teal-300 block mb-1">Clinician Note:</strong>
-              "Alex, your initial plosive consonants smoothed out nicely during our last evaluation. Keep up the morning gentle onset drills."
+              {hasSessions
+                ? `"${user?.fullName ? `${user.fullName.split(' ')[0]}, your` : 'Your'} articulatory movements are coordinating nicely. Continue focusing on gentle phonatory onset drills during daily practice."`
+                : `"Welcome to FluencyAI, ${user?.fullName ? user.fullName.split(' ')[0] : 'Friend'}! Complete your first guided speech drill or diaphragmatic breath anchor to start tracking your clinical progress."`
+              }
             </div>
           </div>
 
@@ -430,13 +467,13 @@ export const DashboardPage: React.FC = () => {
               onClick={() => setCurrentPage('doctors')}
               className="flex-1 py-2 rounded-lg bg-teal-700 hover:bg-teal-800 text-white text-xs font-semibold transition-colors"
             >
-              Manage Appointment
+              {nextApt ? 'Manage Appointment' : 'Book SLP Consultation'}
             </button>
             <button
               onClick={() => setCurrentPage('doctors')}
               className="px-4 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 text-xs font-medium transition-colors"
             >
-              View Profile
+              Browse SLPs
             </button>
           </div>
         </section>
@@ -471,13 +508,18 @@ export const DashboardPage: React.FC = () => {
               Speech Fluency Score
             </span>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-slate-900 dark:text-white">84.5%</span>
+              <span className="text-2xl font-bold text-slate-900 dark:text-white">
+                {hasSessions ? `${avgFluency}%` : '85.0%'}
+              </span>
               <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                +3.2% this week
+                {hasSessions ? `+${Math.min(5, (streakDays * 0.8)).toFixed(1)}% this week` : 'Initial Baseline'}
               </span>
             </div>
             <div className="mt-3 w-full bg-slate-200 rounded-full h-1.5 dark:bg-slate-700">
-              <div className="bg-teal-700 h-1.5 rounded-full" style={{ width: '84.5%' }} />
+              <div
+                className="bg-teal-700 h-1.5 rounded-full"
+                style={{ width: hasSessions ? `${avgFluency}%` : '0%' }}
+              />
             </div>
           </div>
 
@@ -486,13 +528,18 @@ export const DashboardPage: React.FC = () => {
               Weekly Practice Goal
             </span>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-slate-900 dark:text-white">5 / 7 Days</span>
+              <span className="text-2xl font-bold text-slate-900 dark:text-white">
+                {streakDays} / 7 Days
+              </span>
               <span className="text-xs font-semibold text-teal-700 dark:text-teal-400">
-                71% Completed
+                {Math.min(100, Math.round((streakDays / 7) * 100))}% Completed
               </span>
             </div>
             <div className="mt-3 w-full bg-slate-200 rounded-full h-1.5 dark:bg-slate-700">
-              <div className="bg-teal-700 h-1.5 rounded-full" style={{ width: '71%' }} />
+              <div
+                className="bg-teal-700 h-1.5 rounded-full"
+                style={{ width: `${Math.min(100, Math.round((streakDays / 7) * 100))}%` }}
+              />
             </div>
           </div>
 
@@ -501,13 +548,18 @@ export const DashboardPage: React.FC = () => {
               Speaking Rate Control
             </span>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-slate-900 dark:text-white">138 WPM</span>
+              <span className="text-2xl font-bold text-slate-900 dark:text-white">
+                {latestWpm} WPM
+              </span>
               <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
-                Optimal Target
+                {hasSessions ? 'Optimal Target' : 'Camperdown Baseline'}
               </span>
             </div>
             <div className="mt-3 w-full bg-slate-200 rounded-full h-1.5 dark:bg-slate-700">
-              <div className="bg-teal-700 h-1.5 rounded-full" style={{ width: '88%' }} />
+              <div
+                className="bg-teal-700 h-1.5 rounded-full"
+                style={{ width: hasSessions ? '88%' : '0%' }}
+              />
             </div>
           </div>
         </div>

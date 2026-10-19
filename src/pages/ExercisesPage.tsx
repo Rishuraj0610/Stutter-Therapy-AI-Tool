@@ -179,7 +179,7 @@ export const ExercisesPage: React.FC = () => {
       level: 3,
       scenario: 'Introducing Yourself at Dinner',
       description: 'State your full name, what you do, and ask a question to a new acquaintance.',
-      samplePrompt: '"Hi, my name is Alex. I work in software design. How long have you lived in the city?"',
+      samplePrompt: '"Hi, my name is Taylor. I work in software design. How long have you lived in the city?"',
       preConfidence: 4,
       postConfidence: 6,
       completed: false

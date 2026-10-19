@@ -137,34 +137,28 @@ export const DoctorDirectoryPage: React.FC = () => {
       });
       if (res.ok) {
         const data = await res.json();
-        setAppointments(data.appointments || []);
+        const apts = data.appointments || [];
+        setAppointments(apts);
+        if (user?.email) {
+          try {
+            localStorage.setItem(`fluency_appointments_${user.email.toLowerCase()}`, JSON.stringify(apts));
+          } catch (e) {}
+        }
       } else {
-        throw new Error('Fallback to initial state');
+        throw new Error('Fallback to user storage');
       }
     } catch (e) {
-      // Local fallback scoped strictly to current user
-      if (user?.role === 'patient') {
-        setAppointments([
-          {
-            id: 'apt-101',
-            doctorId: 'doc-1',
-            doctorName: 'Dr. Marcus Vance, Ph.D., CCC-SLP',
-            doctorAvatar: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=100&auto=format&fit=crop&q=80',
-            patientId: user?.id || 'usr-patient-1',
-            patientName: user?.fullName || 'Alex Johnson',
-            patientEmail: user?.email || 'alex.patient@fluencyai.org',
-            date: '2026-09-10',
-            timeSlot: '11:00 AM',
-            status: 'confirmed',
-            sessionType: 'virtual',
-            reason: 'Initial Acoustic Spectrogram Review & Camperdown Assessment',
-            meetLink: 'https://meet.google.com/ais-slp-meet',
-            createdAt: new Date().toISOString()
+      // Local fallback scoped strictly to current user's actual stored appointments
+      if (user?.email) {
+        try {
+          const stored = localStorage.getItem(`fluency_appointments_${user.email.toLowerCase()}`);
+          if (stored) {
+            setAppointments(JSON.parse(stored));
+            return;
           }
-        ]);
-      } else {
-        setAppointments([]);
+        } catch (err) {}
       }
+      setAppointments([]);
     }
   };
 
@@ -184,9 +178,9 @@ export const DoctorDirectoryPage: React.FC = () => {
       doctorId: selectedDoctor.id,
       doctorName: selectedDoctor.name,
       doctorAvatar: selectedDoctor.avatar,
-      patientId: user?.id || 'usr-patient-1',
-      patientName: user?.fullName || 'Alex Johnson',
-      patientEmail: user?.email || 'alex.patient@fluencyai.org',
+      patientId: user?.id || 'usr-patient-current',
+      patientName: user?.fullName || (user?.email ? user.email.split('@')[0] : 'Patient'),
+      patientEmail: user?.email || 'patient@fluencyai.org',
       date: bookingDate,
       timeSlot: bookingTime,
       sessionType: bookingFormat,
@@ -209,8 +203,17 @@ export const DoctorDirectoryPage: React.FC = () => {
 
       if (res.ok) {
         const data = await res.json();
-        setBookingSuccess(data.appointment);
-        setAppointments((prev) => [data.appointment, ...prev]);
+        const booked = data.appointment;
+        setBookingSuccess(booked);
+        setAppointments((prev) => {
+          const updated = [booked, ...prev];
+          if (user?.email) {
+            try {
+              localStorage.setItem(`fluency_appointments_${user.email.toLowerCase()}`, JSON.stringify(updated));
+            } catch (err) {}
+          }
+          return updated;
+        });
       } else {
         throw new Error('API failed');
       }
@@ -221,9 +224,9 @@ export const DoctorDirectoryPage: React.FC = () => {
         doctorId: selectedDoctor.id,
         doctorName: selectedDoctor.name,
         doctorAvatar: selectedDoctor.avatar,
-        patientId: user?.id || 'usr-patient-1',
-        patientName: user?.fullName || 'Alex Johnson',
-        patientEmail: user?.email || 'alex.patient@fluencyai.org',
+        patientId: user?.id || 'usr-patient-current',
+        patientName: user?.fullName || (user?.email ? user.email.split('@')[0] : 'Patient'),
+        patientEmail: user?.email || 'patient@fluencyai.org',
         date: bookingDate,
         timeSlot: bookingTime,
         status: 'confirmed',
@@ -234,7 +237,15 @@ export const DoctorDirectoryPage: React.FC = () => {
         createdAt: new Date().toISOString()
       };
       setBookingSuccess(confirmedApt);
-      setAppointments((prev) => [confirmedApt, ...prev]);
+      setAppointments((prev) => {
+        const updated = [confirmedApt, ...prev];
+        if (user?.email) {
+          try {
+            localStorage.setItem(`fluency_appointments_${user.email.toLowerCase()}`, JSON.stringify(updated));
+          } catch (e) {}
+        }
+        return updated;
+      });
     } finally {
       setIsSubmitting(false);
     }

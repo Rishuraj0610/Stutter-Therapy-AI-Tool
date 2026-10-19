@@ -258,7 +258,7 @@ export const PRACTICE_SPEECHES: PracticeExerciseItem[] = [
     wpm: 120,
     phoneticFocus: 'Assertive pacing & eye contact',
     description: 'Master steady breathing and confident pausing during professional workplace introductions.',
-    sample: 'Hello everyone, my name is Alex. Today I am delighted to share our team progress, key project highlights, and future milestones with you all.'
+    sample: 'Hello everyone, my name is Morgan. Today I am delighted to share our team progress, key project highlights, and future milestones with you all.'
   },
   {
     id: 'conv-3',

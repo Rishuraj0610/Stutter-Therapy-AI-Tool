@@ -143,27 +143,11 @@ let doctors = [
 
 let appointments: any[] = [
   {
-    id: 'apt-101',
-    doctorId: 'doc-1',
-    doctorName: 'Dr. Marcus Vance, Ph.D., CCC-SLP',
-    doctorAvatar: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=100&auto=format&fit=crop&q=80',
-    patientId: 'usr-patient-1',
-    patientName: 'Alex Johnson',
-    patientEmail: 'alex.patient@fluencyai.org',
-    date: '2026-09-10',
-    timeSlot: '11:00 AM',
-    status: 'confirmed',
-    sessionType: 'virtual',
-    reason: 'Initial Acoustic Spectrogram Review & Camperdown Assessment',
-    meetLink: 'https://meet.google.com/ais-slp-meet',
-    createdAt: new Date().toISOString()
-  },
-  {
     id: 'apt-102',
     doctorId: 'doc-1',
     doctorName: 'Dr. Marcus Vance, Ph.D., CCC-SLP',
     doctorAvatar: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=100&auto=format&fit=crop&q=80',
-    patientId: 'usr-patient-2',
+    patientId: 'usr-patient-sarah',
     patientName: 'Sarah Miller',
     patientEmail: 'sarah.miller@example.com',
     date: '2026-09-11',
@@ -179,7 +163,7 @@ let appointments: any[] = [
     doctorId: 'doc-2',
     doctorName: 'Dr. Elena Rostova, M.S., CCC-SLP',
     doctorAvatar: 'https://images.unsplash.com/photo-1594824813637-44f24300302b?w=100&auto=format&fit=crop&q=80',
-    patientId: 'usr-patient-3',
+    patientId: 'usr-patient-david',
     patientName: 'David Chen',
     patientEmail: 'david.chen@example.com',
     date: '2026-09-12',
@@ -214,8 +198,8 @@ function resolveUserContext(req: express.Request) {
     role = 'patient';
   }
 
-  const userId = headerId || queryPatientId || (role === 'therapist' ? queryDoctorId || 'usr-dr-marcus' : 'usr-patient-1');
-  const email = headerEmail || queryPatientEmail || (role === 'therapist' ? 'marcus.vance@speechclinic.org' : 'alex.patient@fluencyai.org');
+  const userId = headerId || queryPatientId || (role === 'therapist' ? queryDoctorId || 'usr-dr-marcus' : '');
+  const email = headerEmail || queryPatientEmail || (role === 'therapist' ? 'marcus.vance@speechclinic.org' : '');
 
   return { role, userId, email, token: !!token };
 }
@@ -313,7 +297,7 @@ app.post('/api/appointments', (req, res) => {
     doctorName: doctorName || 'Dr. Marcus Vance, Ph.D., CCC-SLP',
     doctorAvatar: doctorAvatar || 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=100&auto=format&fit=crop&q=80',
     patientId: verifiedPatientId,
-    patientName: patientName || 'Alex Johnson',
+    patientName: patientName || 'Patient',
     patientEmail: verifiedPatientEmail,
     date: date || '2026-09-12',
     timeSlot: timeSlot || '10:00 AM',

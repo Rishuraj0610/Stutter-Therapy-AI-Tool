@@ -37,13 +37,13 @@ export const ProgressPage: React.FC = () => {
   const [deleteConfirmation, setDeleteConfirmation] = useState<boolean>(false);
 
   // Calculate dynamic average score from real recorded sessions
-  const averageScore =
-    practiceSessions && practiceSessions.length > 0
-      ? (practiceSessions.reduce((acc, s) => acc + s.fluencyScore, 0) / practiceSessions.length).toFixed(1)
-      : '85.0';
+  const hasSessions = practiceSessions && practiceSessions.length > 0;
+  const averageScore = hasSessions
+    ? (practiceSessions.reduce((acc, s) => acc + s.fluencyScore, 0) / practiceSessions.length).toFixed(1)
+    : '85.0';
 
   const totalPracticeSeconds = practiceSessions?.reduce((acc, s) => acc + (s.durationSeconds || 0), 0) || 0;
-  const totalHours = (14.5 + totalPracticeSeconds / 3600).toFixed(1);
+  const totalHours = (totalPracticeSeconds / 3600).toFixed(1);
 
   const handleSaveDiary = (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,7 +137,7 @@ export const ProgressPage: React.FC = () => {
         isOpen={showSuperbill}
         onClose={() => setShowSuperbill(false)}
         user={user}
-        patientName={user?.fullName || 'Alex Johnson'}
+        patientName={user?.fullName || (user?.email ? user.email.split('@')[0] : 'Patient')}
         disfluencyBaseline={user?.baselineDisfluencyRate || 8.4}
         currentDisfluency={3.6}
       />
@@ -146,14 +146,20 @@ export const ProgressPage: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 shadow-xs">
           <span className="text-xs text-slate-400 font-semibold">Average Fluency Stability</span>
-          <p className="mt-2 text-3xl font-bold text-teal-600 dark:text-teal-400">{averageScore}%</p>
-          <p className="mt-1 text-xs text-emerald-600 font-medium">Clinically Calculated Across Sessions</p>
+          <p className="mt-2 text-3xl font-bold text-teal-600 dark:text-teal-400">
+            {hasSessions ? `${averageScore}%` : '85.0% (Baseline)'}
+          </p>
+          <p className="mt-1 text-xs text-emerald-600 font-medium">
+            {hasSessions ? 'Clinically Calculated Across Sessions' : 'Initial Patient Baseline Ready'}
+          </p>
         </div>
 
         <div className="rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 shadow-xs">
           <span className="text-xs text-slate-400 font-semibold">Current Practice Streak</span>
-          <p className="mt-2 text-3xl font-bold text-orange-500">{streakDays} Days</p>
-          <p className="mt-1 text-xs text-slate-500 font-medium">Consistent Daily Vocal Warmups</p>
+          <p className="mt-2 text-3xl font-bold text-orange-500">{streakDays} {streakDays === 1 ? 'Day' : 'Days'}</p>
+          <p className="mt-1 text-xs text-slate-500 font-medium">
+            {streakDays > 0 ? 'Consistent Daily Vocal Warmups' : 'Ready to start Day 1 practice'}
+          </p>
         </div>
 
         <div className="rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 shadow-xs">
@@ -180,10 +186,13 @@ export const ProgressPage: React.FC = () => {
               📊 Phonetic Block Distribution:
             </span>
             <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
-              Your disfluencies cluster on <strong>word-initial voiceless plosives (/p/, /t/, /k/)</strong>, particularly during evening practice sessions when fatigue increases articulatory contact pressure.
+              {hasSessions
+                ? <>Your disfluencies cluster on <strong>word-initial voiceless plosives (/p/, /t/, /k/)</strong>, particularly during evening practice sessions when fatigue increases articulatory contact pressure.</>
+                : <>No phonetic blocks recorded yet. Complete guided exercises in the <strong>Speech Practice</strong> module to build your personal articulation tension profile.</>
+              }
             </p>
             <span className="inline-block text-[11px] font-bold text-teal-700 dark:text-teal-400">
-              Recommendation: Pre-warm with 2 min of gentle unvoiced /h/ sigh onset before 6 PM.
+              Recommendation: Pre-warm with 2 min of gentle unvoiced /h/ sigh onset before vocal drills.
             </span>
           </div>
 
@@ -192,10 +201,13 @@ export const ProgressPage: React.FC = () => {
               🎯 Adaptive Pace Calibration:
             </span>
             <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
-              Based on your last 5 sessions (mean disfluency: <strong>3.4%</strong>, well below the 5% threshold), the adaptive engine has raised your suggested target tempo from <strong>115 WPM → 128 WPM</strong>.
+              {hasSessions
+                ? <>Based on your completed sessions (mean fluency: <strong>{averageScore}%</strong>), the adaptive engine has calibrated your suggested target tempo to <strong>120 WPM</strong>.</>
+                : <>Target speech tempo initialized at <strong>110 WPM</strong> for Camperdown rhythmic syllable pacing. As you complete sessions, tempo will calibrate automatically.</>
+              }
             </p>
             <span className="inline-block text-[11px] font-bold text-indigo-700 dark:text-indigo-400">
-              Passage length automatically scaled up to 120 words for endurance conditioning.
+              Passage length automatically scaled for beginner ease and respiratory comfort.
             </span>
           </div>
         </div>

@@ -22,45 +22,45 @@ import {
 import { DailyPracticePlan } from '../types';
 import { DisclaimerNotice } from '../components/common/DisclaimerNotice';
 
-const DEFAULT_7_DAY_PLANS: DailyPracticePlan[] = [
+export const createFresh7DayPlans = (): DailyPracticePlan[] => [
   {
     day: 1,
     title: 'Day 1 - Diaphragmatic Breath Anchor',
-    completed: true,
+    completed: false,
     tasks: [
-      { id: 'd1-t1', timeOfDay: 'morning', title: '5 mins Diaphragmatic Breathing Anchor', category: 'breathing', durationMinutes: 5, completed: true, exerciseId: 'breath-1', description: 'Anchor nervous system with gentle belly expansion and slow nasal inhalation.' },
-      { id: 'd1-t2', timeOfDay: 'afternoon', title: '10 mins Slow Speaking Pace Drill', category: 'slow_speaking', durationMinutes: 10, completed: true, exerciseId: 'slow-1', description: 'Speak at a deliberate 90–100 WPM rate with intentional rhythmic pauses.' },
-      { id: 'd1-t3', timeOfDay: 'evening', title: '5 mins Gentle Reading with Easy Onset', category: 'reading', durationMinutes: 5, completed: true, exerciseId: 'read-1', description: 'Soft vocal fold closure with gentle voicing on vowel onsets.' }
+      { id: 'd1-t1', timeOfDay: 'morning', title: '5 mins Diaphragmatic Breathing Anchor', category: 'breathing', durationMinutes: 5, completed: false, exerciseId: 'breath-1', description: 'Anchor nervous system with gentle belly expansion and slow nasal inhalation.' },
+      { id: 'd1-t2', timeOfDay: 'afternoon', title: '10 mins Slow Speaking Pace Drill', category: 'slow_speaking', durationMinutes: 10, completed: false, exerciseId: 'slow-1', description: 'Speak at a deliberate 90–100 WPM rate with intentional rhythmic pauses.' },
+      { id: 'd1-t3', timeOfDay: 'evening', title: '5 mins Gentle Reading with Easy Onset', category: 'reading', durationMinutes: 5, completed: false, exerciseId: 'read-1', description: 'Soft vocal fold closure with gentle voicing on vowel onsets.' }
     ]
   },
   {
     day: 2,
     title: 'Day 2 - Easy Onset & Phonation Flow',
-    completed: true,
+    completed: false,
     tasks: [
-      { id: 'd2-t1', timeOfDay: 'morning', title: '5 mins Easy Vocal Onset (H-Words)', category: 'breathing', durationMinutes: 5, completed: true, exerciseId: 'breath-2', description: 'Use an aspirate /h/ cushion before vowel sounds to minimize vocal fold tension.' },
-      { id: 'd2-t2', timeOfDay: 'afternoon', title: '10 mins Rainbow Passage Pacing', category: 'reading', durationMinutes: 10, completed: true, exerciseId: 'read-1', description: 'Read with smooth phrasing across natural breath groups.' },
-      { id: 'd2-t3', timeOfDay: 'evening', title: '5 mins Confidence Vocal Affirmations', category: 'confidence', durationMinutes: 5, completed: true, exerciseId: 'read-custom', description: 'Grounding voice affirmations reinforcing natural speech rhythm.' }
+      { id: 'd2-t1', timeOfDay: 'morning', title: '5 mins Easy Vocal Onset (H-Words)', category: 'breathing', durationMinutes: 5, completed: false, exerciseId: 'breath-2', description: 'Use an aspirate /h/ cushion before vowel sounds to minimize vocal fold tension.' },
+      { id: 'd2-t2', timeOfDay: 'afternoon', title: '10 mins Rainbow Passage Pacing', category: 'reading', durationMinutes: 10, completed: false, exerciseId: 'read-1', description: 'Read with smooth phrasing across natural breath groups.' },
+      { id: 'd2-t3', timeOfDay: 'evening', title: '5 mins Confidence Vocal Affirmations', category: 'confidence', durationMinutes: 5, completed: false, exerciseId: 'read-custom', description: 'Grounding voice affirmations reinforcing natural speech rhythm.' }
     ]
   },
   {
     day: 3,
     title: 'Day 3 - Light Articulatory Contacts',
-    completed: true,
+    completed: false,
     tasks: [
-      { id: 'd3-t1', timeOfDay: 'morning', title: '5 mins Lip & Tongue Relaxation Drills', category: 'breathing', durationMinutes: 5, completed: true, exerciseId: 'breath-3', description: 'Releasing jaw and articulatory tension before speech.' },
-      { id: 'd3-t2', timeOfDay: 'afternoon', title: '10 mins Difficult Plosive Words (/p/, /b/, /t/)', category: 'difficult_words', durationMinutes: 10, completed: true, exerciseId: 'diff-1', description: 'Feather-light articulatory contact without muscular pressing.' },
-      { id: 'd3-t3', timeOfDay: 'evening', title: '5 mins Reading Arthur the Rat', category: 'reading', durationMinutes: 5, completed: true, exerciseId: 'read-2', description: 'Classic fluency passage read with relaxed articulators.' }
+      { id: 'd3-t1', timeOfDay: 'morning', title: '5 mins Lip & Tongue Relaxation Drills', category: 'breathing', durationMinutes: 5, completed: false, exerciseId: 'breath-3', description: 'Releasing jaw and articulatory tension before speech.' },
+      { id: 'd3-t2', timeOfDay: 'afternoon', title: '10 mins Difficult Plosive Words (/p/, /b/, /t/)', category: 'difficult_words', durationMinutes: 10, completed: false, exerciseId: 'diff-1', description: 'Feather-light articulatory contact without muscular pressing.' },
+      { id: 'd3-t3', timeOfDay: 'evening', title: '5 mins Reading Arthur the Rat', category: 'reading', durationMinutes: 5, completed: false, exerciseId: 'read-2', description: 'Classic fluency passage read with relaxed articulators.' }
     ]
   },
   {
     day: 4,
     title: 'Day 4 - Pausing & Natural Phrasing',
-    completed: true,
+    completed: false,
     tasks: [
-      { id: 'd4-t1', timeOfDay: 'morning', title: '5 mins 4-7-8 Breathing Calmer', category: 'breathing', durationMinutes: 5, completed: true, exerciseId: 'breath-2', description: 'Vagus nerve stimulation to lower speech performance anxiety.' },
-      { id: 'd4-t2', timeOfDay: 'afternoon', title: '10 mins Pausing at Punctuation Drill', category: 'reading', durationMinutes: 10, completed: true, exerciseId: 'read-1', description: 'Insert deliberate 1-second pauses at commas and sentence boundaries.' },
-      { id: 'd4-t3', timeOfDay: 'evening', title: '5 mins Short Conversational Prompts', category: 'conversation', durationMinutes: 5, completed: true, exerciseId: 'conv-1', description: 'Practicing pausing before speaking to formulate thoughts calmly.' }
+      { id: 'd4-t1', timeOfDay: 'morning', title: '5 mins 4-7-8 Breathing Calmer', category: 'breathing', durationMinutes: 5, completed: false, exerciseId: 'breath-2', description: 'Vagus nerve stimulation to lower speech performance anxiety.' },
+      { id: 'd4-t2', timeOfDay: 'afternoon', title: '10 mins Pausing at Punctuation Drill', category: 'reading', durationMinutes: 10, completed: false, exerciseId: 'read-1', description: 'Insert deliberate 1-second pauses at commas and sentence boundaries.' },
+      { id: 'd4-t3', timeOfDay: 'evening', title: '5 mins Short Conversational Prompts', category: 'conversation', durationMinutes: 5, completed: false, exerciseId: 'conv-1', description: 'Practicing pausing before speaking to formulate thoughts calmly.' }
     ]
   },
   {
@@ -68,8 +68,8 @@ const DEFAULT_7_DAY_PLANS: DailyPracticePlan[] = [
     title: 'Day 5 - Real-Life Situations (Ordering at Cafe)',
     completed: false,
     tasks: [
-      { id: 'task-m', timeOfDay: 'morning', title: '5 minutes Diaphragmatic Breathing', category: 'breathing', durationMinutes: 5, completed: true, exerciseId: 'breath-1', description: 'Establish foundational breath support before daily interactions.' },
-      { id: 'task-a', timeOfDay: 'afternoon', title: '10 minutes Reading Practice (Pacing & Light Contact)', category: 'reading', durationMinutes: 10, completed: true, exerciseId: 'read-1', description: 'Maintain relaxed jaw and gentle articulatory contact.' },
+      { id: 'task-m', timeOfDay: 'morning', title: '5 minutes Diaphragmatic Breathing', category: 'breathing', durationMinutes: 5, completed: false, exerciseId: 'breath-1', description: 'Establish foundational breath support before daily interactions.' },
+      { id: 'task-a', timeOfDay: 'afternoon', title: '10 minutes Reading Practice (Pacing & Light Contact)', category: 'reading', durationMinutes: 10, completed: false, exerciseId: 'read-1', description: 'Maintain relaxed jaw and gentle articulatory contact.' },
       { id: 'task-e', timeOfDay: 'evening', title: '5 minutes Conversation Simulation (Ordering at Cafe)', category: 'conversation', durationMinutes: 5, completed: false, exerciseId: 'conv-1', description: 'Simulate a friendly coffee shop order using continuous phonation.' }
     ]
   },
@@ -96,14 +96,55 @@ const DEFAULT_7_DAY_PLANS: DailyPracticePlan[] = [
 ];
 
 export const DailyPracticePlanPage: React.FC = () => {
-  const { token, setCurrentPage, streakDays, setStreakDays } = useAuth();
-  const [plans, setPlans] = useState<DailyPracticePlan[]>(DEFAULT_7_DAY_PLANS);
-  const [selectedDayIndex, setSelectedDayIndex] = useState(4); // Day 5 by default
+  const { user, token, setCurrentPage, streakDays, setStreakDays } = useAuth();
+  
+  const planStorageKey = user?.email
+    ? `fluency_plans_${user.email.toLowerCase()}`
+    : 'fluency_plans_guest';
+
+  const [plans, setPlans] = useState<DailyPracticePlan[]>(() => {
+    try {
+      const saved = localStorage.getItem(user?.email ? `fluency_plans_${user.email.toLowerCase()}` : 'fluency_plans_guest');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return createFresh7DayPlans();
+  });
+
+  const [selectedDayIndex, setSelectedDayIndex] = useState(0); // Day 1 by default for new users
   const [loading, setLoading] = useState(false);
   const [remindersEnabled, setRemindersEnabled] = useState(true);
   const [reminderTime, setReminderTime] = useState('08:30');
   const [showStreakModal, setShowStreakModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Sync plans when user changes
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(planStorageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setPlans(parsed);
+          // Find first uncompleted day
+          const firstIncomplete = parsed.findIndex((d: any) => !d.completed);
+          setSelectedDayIndex(firstIncomplete >= 0 ? firstIncomplete : 0);
+          return;
+        }
+      }
+    } catch (e) {}
+    setPlans(createFresh7DayPlans());
+    setSelectedDayIndex(0);
+  }, [planStorageKey]);
+
+  // Persist plans per user
+  useEffect(() => {
+    try {
+      localStorage.setItem(planStorageKey, JSON.stringify(plans));
+    } catch (e) {}
+  }, [plans, planStorageKey]);
 
   const startExercise = (exerciseId: string) => {
     if (exerciseId.startsWith('conv') || exerciseId.startsWith('ai')) {
@@ -168,7 +209,7 @@ export const DailyPracticePlanPage: React.FC = () => {
 
     // 1. Immediate optimistic update across plans
     setPlans(prevPlans =>
-      (Array.isArray(prevPlans) ? prevPlans : DEFAULT_7_DAY_PLANS).map(dayPlan => {
+      (Array.isArray(prevPlans) ? prevPlans : createFresh7DayPlans()).map(dayPlan => {
         const hasTask = dayPlan.tasks.some(t => t.id === taskId);
         if (!hasTask) return dayPlan;
 
@@ -233,8 +274,8 @@ export const DailyPracticePlanPage: React.FC = () => {
     }
   };
 
-  const safePlans = Array.isArray(plans) && plans.length > 0 ? plans : DEFAULT_7_DAY_PLANS;
-  const activeDay = safePlans[selectedDayIndex] || safePlans[0] || DEFAULT_7_DAY_PLANS[0];
+  const safePlans = Array.isArray(plans) && plans.length > 0 ? plans : createFresh7DayPlans();
+  const activeDay = safePlans[selectedDayIndex] || safePlans[0];
   const activeCompletedTasks = activeDay.tasks.filter(t => t.completed).length;
   const activeTotalTasks = activeDay.tasks.length;
   const daysLeftToMaster = Math.max(0, 7 - streakDays);

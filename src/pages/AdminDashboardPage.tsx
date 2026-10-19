@@ -39,9 +39,9 @@ export const AdminDashboardPage: React.FC = () => {
   }
 
   const patients = [
-    { name: 'Alex Johnson', lastSeen: 'Today, 2:15 PM', baseline: 8.4, currentRate: 4.2, status: 'Improving', trend: '+12%' },
+    { name: 'Jordan Davis', lastSeen: 'Today, 2:15 PM', baseline: 8.4, currentRate: 4.2, status: 'Improving', trend: '+12%' },
     { name: 'Sophia Chen', lastSeen: 'Yesterday', baseline: 11.2, currentRate: 7.1, status: 'Consistent', trend: '+8%' },
-    { name: 'Jordan Miller', lastSeen: '3 days ago', baseline: 6.8, currentRate: 5.5, status: 'Needs Follow-up', trend: '+3%' }
+    { name: 'Elena Rostova', lastSeen: '3 days ago', baseline: 6.8, currentRate: 5.5, status: 'Needs Follow-up', trend: '+3%' }
   ];
 
   return (

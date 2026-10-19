@@ -281,7 +281,12 @@ export const AuthPages: React.FC<AuthPagesProps> = ({ initialMode = 'login' }) =
         };
         const res = await registerUser(payload);
         if (res.success) {
-          setMode('verify_pending');
+          // Direct divert to login page after creating account
+          setMode('login');
+          setEmail(payload.email);
+          setPassword('');
+          setConfirmPassword('');
+          setSuccessMessage('Account created successfully! Verification email recorded. Please sign in below.');
         }
       } else {
         const payload: RegisterClinicianPayload = {
@@ -299,7 +304,12 @@ export const AuthPages: React.FC<AuthPagesProps> = ({ initialMode = 'login' }) =
         };
         const res = await registerUser(payload);
         if (res.success) {
-          setMode('verify_pending');
+          // Direct divert to login page after creating account
+          setMode('login');
+          setEmail(payload.email);
+          setPassword('');
+          setConfirmPassword('');
+          setSuccessMessage('Clinician account created successfully! Please sign in below to access your dashboard.');
         }
       }
     } catch {
@@ -569,21 +579,10 @@ export const AuthPages: React.FC<AuthPagesProps> = ({ initialMode = 'login' }) =
               <ArrowRight className="w-4 h-4" />
             </button>
 
-            {/* Quick Demo Pre-fills */}
+            {/* Quick Demo Pre-fill */}
             <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-              <p className="text-[10px] text-slate-400 text-center mb-1.5">Quick Clinical Testing Presets:</p>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEmail('alex.patient@fluencyai.org');
-                    setPassword('clinicalSample2026!');
-                    setRole('patient');
-                  }}
-                  className="flex-1 py-1.5 px-2 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-teal-50 border border-slate-200 dark:border-slate-700 text-[11px] text-slate-700 dark:text-slate-300 font-medium"
-                >
-                  Alex (Patient)
-                </button>
+              <p className="text-[10px] text-slate-400 text-center mb-1.5">Quick Clinical Testing Preset:</p>
+              <div className="flex justify-center">
                 <button
                   type="button"
                   onClick={() => {
@@ -591,9 +590,9 @@ export const AuthPages: React.FC<AuthPagesProps> = ({ initialMode = 'login' }) =
                     setPassword('slpSpecialist2026!');
                     setRole('therapist');
                   }}
-                  className="flex-1 py-1.5 px-2 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-teal-50 border border-slate-200 dark:border-slate-700 text-[11px] text-slate-700 dark:text-slate-300 font-medium"
+                  className="w-full py-1.5 px-3 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-teal-50 dark:hover:bg-teal-950 border border-slate-200 dark:border-slate-700 text-[11px] text-slate-700 dark:text-slate-300 font-medium text-center"
                 >
-                  Dr. Vance (SLP)
+                  Dr. Marcus Vance (Licensed SLP Clinician Preset)
                 </button>
               </div>
             </div>
@@ -655,7 +654,7 @@ export const AuthPages: React.FC<AuthPagesProps> = ({ initialMode = 'login' }) =
                   type="text"
                   autoComplete="name"
                   required
-                  placeholder={role === 'therapist' ? 'Dr. Marcus Vance, CCC-SLP' : 'Alex Johnson'}
+                  placeholder={role === 'therapist' ? 'e.g. Dr. Marcus Vance, CCC-SLP' : 'e.g. Sarah Miller'}
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   onBlur={() => handleBlur('fullName')}
@@ -1025,7 +1024,14 @@ export const AuthPages: React.FC<AuthPagesProps> = ({ initialMode = 'login' }) =
                 onClick={handleVerifyEmail}
                 className="flex-1 py-2.5 px-3 rounded-xl bg-teal-700 text-white text-xs font-bold hover:bg-teal-800 transition-colors shadow-2xs"
               >
-                Simulate Clicking Email Link
+                Verify Instantly & Proceed
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('login')}
+                className="flex-1 py-2.5 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-bold hover:bg-slate-200 transition-colors"
+              >
+                Go Directly to Sign In
               </button>
               <button
                 type="button"
@@ -1033,17 +1039,7 @@ export const AuthPages: React.FC<AuthPagesProps> = ({ initialMode = 'login' }) =
                 onClick={handleResendVerification}
                 className="py-2.5 px-3 rounded-xl border border-slate-200 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-300 font-semibold hover:bg-slate-50 disabled:opacity-50"
               >
-                {resendCooldown > 0 ? `Resend (${resendCooldown}s)` : 'Resend Email'}
-              </button>
-            </div>
-
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={() => setMode('login')}
-                className="text-xs text-slate-500 hover:text-teal-700"
-              >
-                Return to sign in
+                {resendCooldown > 0 ? `Resend (${resendCooldown}s)` : 'Resend'}
               </button>
             </div>
           </div>

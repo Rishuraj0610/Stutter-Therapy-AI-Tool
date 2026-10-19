@@ -16,7 +16,16 @@ import {
   Lock,
   Clock,
   FileText,
-  ShieldAlert
+  ShieldAlert,
+  Edit3,
+  Save,
+  X,
+  Calendar,
+  Target,
+  Activity,
+  Award,
+  Building,
+  CheckCircle2
 } from 'lucide-react';
 
 export const ProfilePage: React.FC = () => {
@@ -32,8 +41,60 @@ export const ProfilePage: React.FC = () => {
     toggleTwoFactorAuth,
     deleteAccountWithGracePeriod,
     cancelAccountDeletion,
-    downloadUserData
+    downloadUserData,
+    updateUserProfile
   } = useAuth();
+
+  // Profile editing state
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editFullName, setEditFullName] = useState(user?.fullName || '');
+  const [editDob, setEditDob] = useState(user?.dateOfBirth || '');
+  const [editSeverity, setEditSeverity] = useState(user?.stutterSeverity || 'moderate');
+  const [editGoal, setEditGoal] = useState(user?.primaryGoal || '');
+  const [editCredential, setEditCredential] = useState(user?.credentials || 'CCC-SLP');
+  const [editLicense, setEditLicense] = useState(user?.licenseNumber || '');
+  const [editInstitution, setEditInstitution] = useState(user?.institution || '');
+  const [editYears, setEditYears] = useState(user?.yearsOfExperience || 5);
+  const [profileSaveSuccess, setProfileSaveSuccess] = useState(false);
+
+  // Sync state when user changes
+  React.useEffect(() => {
+    if (user) {
+      setEditFullName(user.fullName || '');
+      setEditDob(user.dateOfBirth || '');
+      setEditSeverity(user.stutterSeverity || 'moderate');
+      setEditGoal(user.primaryGoal || '');
+      setEditCredential(user.credentials || 'CCC-SLP');
+      setEditLicense(user.licenseNumber || '');
+      setEditInstitution(user.institution || '');
+      setEditYears(user.yearsOfExperience || 5);
+    }
+  }, [user]);
+
+  const handleSaveProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (role === 'patient') {
+      updateUserProfile({
+        fullName: editFullName.trim(),
+        dateOfBirth: editDob,
+        stutterSeverity: editSeverity as any,
+        primaryGoal: editGoal.trim()
+      });
+    } else {
+      updateUserProfile({
+        fullName: editFullName.trim(),
+        credentials: editCredential.trim(),
+        licenseNumber: editLicense.trim(),
+        institution: editInstitution.trim(),
+        yearsOfExperience: Number(editYears) || 1
+      });
+    }
+    setProfileSaveSuccess(true);
+    setTimeout(() => {
+      setProfileSaveSuccess(false);
+      setIsEditingProfile(false);
+    }, 1200);
+  };
 
   // Change password modal state
   const [showPasswordChange, setShowPasswordChange] = useState(false);
@@ -124,17 +185,17 @@ export const ProfilePage: React.FC = () => {
       <div className="rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <img
-            src={user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
-            alt={user?.fullName}
-            className="h-16 w-16 rounded-2xl object-cover border-2 border-teal-500/20"
+            src={user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user?.fullName || user?.email || 'User')}`}
+            alt={user?.fullName || 'User Avatar'}
+            className="h-16 w-16 rounded-2xl object-cover border-2 border-teal-500/20 shadow-xs"
           />
           <div>
             <div className="flex items-center gap-2">
               <h2 className="font-bold text-base text-slate-900 dark:text-white">
-                {user?.fullName || 'Alex Johnson'}
+                {user?.fullName || (user?.email ? user.email.split('@')[0] : 'My Profile')}
               </h2>
               <span className="rounded-full bg-teal-50 px-2.5 py-0.5 text-[10px] font-bold text-teal-700 capitalize dark:bg-teal-950 dark:text-teal-300">
-                {role} Account
+                {role === 'therapist' ? 'Clinician' : 'Patient'} Account
               </span>
               {user?.emailVerified ? (
                 <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 flex items-center gap-1">
@@ -158,13 +219,306 @@ export const ProfilePage: React.FC = () => {
           </div>
         </div>
 
-        <button
-          onClick={logout}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
-        >
-          <LogOut className="w-4 h-4" />
-          Sign Out
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsEditingProfile(!isEditingProfile)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+          >
+            <Edit3 className="w-3.5 h-3.5 text-teal-600" />
+            {isEditingProfile ? 'Close Editor' : 'Edit Profile'}
+          </button>
+          <button
+            onClick={logout}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+            Sign Out
+          </button>
+        </div>
+      </div>
+
+      {/* Comprehensive Personal & Clinical Profile Details */}
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 shadow-sm space-y-5">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div>
+            <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+              <User className="w-4 h-4 text-teal-600" />
+              Registered Profile & Clinical Metadata
+            </h3>
+            <p className="text-xs text-slate-500">
+              Details associated with your active login identity and speech pathology records.
+            </p>
+          </div>
+
+          {profileSaveSuccess && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-xs font-bold animate-pulse">
+              <CheckCircle2 className="w-3.5 h-3.5" /> Changes Saved!
+            </span>
+          )}
+        </div>
+
+        {isEditingProfile ? (
+          <form onSubmit={handleSaveProfile} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Full Legal Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editFullName}
+                  onChange={(e) => setEditFullName(e.target.value)}
+                  className="w-full p-2.5 text-xs rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Registered Email (Fixed)
+                </label>
+                <input
+                  type="email"
+                  disabled
+                  value={user?.email || ''}
+                  className="w-full p-2.5 text-xs rounded-xl border border-slate-200 bg-slate-100 dark:bg-slate-800/50 dark:border-slate-700 text-slate-500 cursor-not-allowed"
+                />
+              </div>
+
+              {role === 'patient' ? (
+                <>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Date of Birth
+                    </label>
+                    <input
+                      type="date"
+                      value={editDob}
+                      onChange={(e) => setEditDob(e.target.value)}
+                      className="w-full p-2.5 text-xs rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Stuttering Severity
+                    </label>
+                    <select
+                      value={editSeverity}
+                      onChange={(e) => setEditSeverity(e.target.value as any)}
+                      className="w-full p-2.5 text-xs rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                    >
+                      <option value="mild">Mild (occasional prolongations / hesitations)</option>
+                      <option value="moderate">Moderate (frequent blocks & tension)</option>
+                      <option value="severe">Severe (high frequency anticipatory blocks)</option>
+                      <option value="not_sure">Not Sure / Pending Clinical Evaluation</option>
+                    </select>
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Primary Speaking & Fluency Goal
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={editGoal}
+                      onChange={(e) => setEditGoal(e.target.value)}
+                      placeholder="e.g. Master gentle onset during work meetings and feel calm on phone calls"
+                      className="w-full p-2.5 text-xs rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Professional Credential
+                    </label>
+                    <input
+                      type="text"
+                      value={editCredential}
+                      onChange={(e) => setEditCredential(e.target.value)}
+                      placeholder="e.g. CCC-SLP, BCS-F, RCI"
+                      className="w-full p-2.5 text-xs rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      License Registration Number
+                    </label>
+                    <input
+                      type="text"
+                      value={editLicense}
+                      onChange={(e) => setEditLicense(e.target.value)}
+                      placeholder="e.g. SLP-94820-CA"
+                      className="w-full p-2.5 text-xs rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Clinical Institution / Hospital
+                    </label>
+                    <input
+                      type="text"
+                      value={editInstitution}
+                      onChange={(e) => setEditInstitution(e.target.value)}
+                      placeholder="e.g. Speech & Fluency Clinic"
+                      className="w-full p-2.5 text-xs rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Years of Clinical Experience
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={50}
+                      value={editYears}
+                      onChange={(e) => setEditYears(Number(e.target.value))}
+                      className="w-full p-2.5 text-xs rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="flex gap-2 justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setIsEditingProfile(false)}
+                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs transition-colors shadow-2xs"
+              >
+                <Save className="w-3.5 h-3.5" />
+                Save Profile Changes
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Field: Full Name */}
+            <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-800">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Full Legal Name</p>
+              <p className="text-xs font-bold text-slate-800 dark:text-slate-100 mt-1">
+                {user?.fullName || (user?.email ? user.email.split('@')[0] : 'Member')}
+              </p>
+            </div>
+
+            {/* Field: Email */}
+            <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-800">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Registered Email</p>
+              <p className="text-xs font-bold text-slate-800 dark:text-slate-100 mt-1 truncate">
+                {user?.email}
+              </p>
+            </div>
+
+            {/* Field: Account Role */}
+            <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-800">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Account Type</p>
+              <p className="text-xs font-bold text-teal-700 dark:text-teal-400 mt-1 capitalize">
+                {role === 'therapist' ? 'Speech-Language Pathologist' : 'Patient (PWS)'}
+              </p>
+            </div>
+
+            {role === 'patient' ? (
+              <>
+                {/* Field: Date of Birth */}
+                <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-800">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Date of Birth</p>
+                  <p className="text-xs font-bold text-slate-800 dark:text-slate-100 mt-1">
+                    {user?.dateOfBirth ? user.dateOfBirth : '1998-05-15 (Adult)'}
+                  </p>
+                </div>
+
+                {/* Field: Stutter Severity */}
+                <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-800">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Self-Reported Severity</p>
+                  <span className="inline-block mt-1 px-2.5 py-0.5 rounded-md text-[11px] font-bold uppercase bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800">
+                    {user?.stutterSeverity || 'Moderate'}
+                  </span>
+                </div>
+
+                {/* Field: Baseline Disfluency */}
+                <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-800">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Acoustic Baseline (%SS)</p>
+                  <p className="text-xs font-bold text-slate-800 dark:text-slate-100 mt-1">
+                    {user?.baselineDisfluencyRate ? `${user.baselineDisfluencyRate}% SS` : '5.8% SS'}
+                  </p>
+                </div>
+
+                {/* Field: Primary Speaking Goal */}
+                <div className="sm:col-span-2 lg:col-span-3 p-3.5 rounded-2xl bg-teal-50/40 dark:bg-teal-950/20 border border-teal-200/60 dark:border-teal-900/50">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-teal-800 dark:text-teal-300 flex items-center gap-1.5">
+                    <Target className="w-3.5 h-3.5" />
+                    Primary Speech Therapy Goal
+                  </p>
+                  <p className="text-xs text-slate-700 dark:text-slate-300 mt-1 leading-relaxed">
+                    {user?.primaryGoal || 'Improve daily fluency confidence and speech ease'}
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Field: Credential */}
+                <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-800">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Credentials</p>
+                  <p className="text-xs font-bold text-slate-800 dark:text-slate-100 mt-1">
+                    {user?.credentials || 'CCC-SLP'}
+                  </p>
+                </div>
+
+                {/* Field: License Number */}
+                <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-800">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">License Number</p>
+                  <p className="text-xs font-bold text-slate-800 dark:text-slate-100 mt-1 font-mono">
+                    {user?.licenseNumber || 'SLP-RCI-2026'}
+                  </p>
+                </div>
+
+                {/* Field: Clinical Institution */}
+                <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-800">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Institution / Practice</p>
+                  <p className="text-xs font-bold text-slate-800 dark:text-slate-100 mt-1">
+                    {user?.institution || 'Speech Pathology Clinic'}
+                  </p>
+                </div>
+
+                {/* Field: Experience */}
+                <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-800">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Clinical Experience</p>
+                  <p className="text-xs font-bold text-slate-800 dark:text-slate-100 mt-1">
+                    {user?.yearsOfExperience || 8} years active practice
+                  </p>
+                </div>
+              </>
+            )}
+
+            {/* Field: Privacy & DPDP Consent */}
+            <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-800">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">DPDP Act 2023 Consent</p>
+              <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mt-1 flex items-center gap-1">
+                <Check className="w-3.5 h-3.5" /> Explicit Processing Granted
+              </p>
+            </div>
+
+            {/* Field: Research Consent */}
+            <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-800">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Anonymized Research</p>
+              <p className="text-xs font-medium text-slate-600 dark:text-slate-300 mt-1">
+                {user?.researchConsent ? 'Allowed (Anonymized Speech Models)' : 'Declined (Private Records Only)'}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Security Credentials Card: Password & 2FA */}

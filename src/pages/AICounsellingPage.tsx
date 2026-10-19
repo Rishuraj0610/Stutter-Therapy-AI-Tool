@@ -42,7 +42,7 @@ export const AICounsellingPage: React.FC = () => {
     {
       id: 'msg-welcome',
       sender: 'assistant',
-      content: `Hello **${user?.fullName || 'Alex'}**! I am your **FluencyAI Clinical Companion**, powered directly by **Gemini AI**.
+      content: `Hello **${user?.fullName?.split(' ')[0] || (user?.email ? user.email.split('@')[0] : 'there')}**! I am your **FluencyAI Clinical Companion**, powered directly by **Gemini AI**.
 
 Here to support you with:
 - 🎯 **Technique Mastery:** Physical mechanics for **Gentle Onset**, **Light Contact**, **Continuous Phonation**, and **Pull-Outs**.
