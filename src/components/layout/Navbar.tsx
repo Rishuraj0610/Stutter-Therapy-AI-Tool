@@ -13,7 +13,9 @@ import {
   HeartPulse,
   ChevronDown,
   Flame,
-  Sidebar
+  Sidebar,
+  Sun,
+  Moon
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -22,7 +24,7 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar, isSidebarOpen }) => {
-  const { user, isAuthenticated, logout, switchDemoRole, setCurrentPage, currentPage, streakDays } = useAuth();
+  const { user, isAuthenticated, logout, switchDemoRole, setCurrentPage, currentPage, streakDays, theme, toggleTheme } = useAuth();
   const [showNotif, setShowNotif] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -162,6 +164,20 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar, isSidebarOpen }
             <span>{streakDays}d Streak</span>
           </button>
         )}
+
+        {/* Theme Mode Toggle (Defaults to Clinical Light) */}
+        <button
+          onClick={toggleTheme}
+          className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
+          title={theme === 'dark' ? "Switch to Clinical Light Theme" : "Switch to Dark Theme"}
+          aria-label={theme === 'dark' ? "Switch to Clinical Light Theme" : "Switch to Dark Theme"}
+        >
+          {theme === 'dark' ? (
+            <Sun className="h-4 w-4 text-amber-500" />
+          ) : (
+            <Moon className="h-4 w-4 text-slate-600 dark:text-slate-300" />
+          )}
+        </button>
 
         {/* Notifications */}
         {isAuthenticated && (

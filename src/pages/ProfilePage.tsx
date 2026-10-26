@@ -25,7 +25,9 @@ import {
   Activity,
   Award,
   Building,
-  CheckCircle2
+  CheckCircle2,
+  Sun,
+  Moon
 } from 'lucide-react';
 
 export const ProfilePage: React.FC = () => {
@@ -36,6 +38,8 @@ export const ProfilePage: React.FC = () => {
     logout,
     fontSize,
     setFontSize,
+    theme,
+    toggleTheme,
     terminateSession,
     terminateAllOtherSessions,
     toggleTwoFactorAuth,
@@ -738,13 +742,56 @@ export const ProfilePage: React.FC = () => {
       <div className="rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 shadow-sm space-y-4">
         <div>
           <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-            Accessibility & Typography
+            Accessibility & Display Settings
           </h3>
           <p className="text-xs text-slate-500">
-            Control text scale for comfortable reading and speech therapy practice.
+            Control text scale and color theme for comfortable reading and speech practice.
           </p>
         </div>
 
+        {/* Display Theme */}
+        <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-white dark:bg-slate-800 shadow-2xs border border-slate-200/60 dark:border-slate-700">
+              {theme === 'dark' ? (
+                <Moon className="w-5 h-5 text-indigo-500" />
+              ) : (
+                <Sun className="w-5 h-5 text-amber-500" />
+              )}
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-900 dark:text-white">App Color Theme</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                {theme === 'light' ? 'Clinical Light Theme (Active Default)' : 'Dark High-Contrast Theme'}
+              </p>
+            </div>
+          </div>
+
+          <div className="inline-flex rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-0.5 text-xs font-semibold">
+            <button
+              onClick={() => theme !== 'light' && toggleTheme()}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                theme === 'light'
+                  ? 'bg-teal-700 text-white shadow-2xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              }`}
+            >
+              Light
+            </button>
+            <button
+              onClick={() => theme !== 'dark' && toggleTheme()}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                theme === 'dark'
+                  ? 'bg-teal-700 text-white shadow-2xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              }`}
+            >
+              Dark
+            </button>
+          </div>
+        </div>
+
+        {/* Text Size */}
         <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-white dark:bg-slate-800 shadow-2xs border border-slate-200/60 dark:border-slate-700">

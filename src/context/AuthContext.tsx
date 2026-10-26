@@ -323,7 +323,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return localStorage.getItem('fluency_token') || null;
   });
 
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    try {
+      const saved = localStorage.getItem('fluency_dark_theme');
+      return saved === 'dark' ? 'dark' : 'light';
+    } catch (e) {
+      return 'light';
+    }
+  });
+
+  // Authoritatively sync theme with documentElement and localStorage (defaults to light)
+  useEffect(() => {
+    try {
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('fluency_dark_theme', 'dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('fluency_dark_theme', 'light');
+      }
+    } catch (e) {}
+  }, [theme]);
 
   const [appTheme, setAppThemeState] = useState<AppTheme>(() => {
     return (localStorage.getItem('fluency_app_theme') as AppTheme) || 'teal';
