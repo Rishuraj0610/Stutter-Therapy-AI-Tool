@@ -80,7 +80,12 @@ let doctors = [
     location: 'San Francisco, CA (Telehealth Nationwide)',
     acceptsInsurance: true,
     virtualAvailable: true,
-    inPersonAvailable: true
+    inPersonAvailable: true,
+    licenseNumber: 'ASHA CCC-SLP #948102 • CA Board #18492 (Active)',
+    telepracticeSecurity: 'HIPAA & DPDP Act 2023 Verified • 100% In-Browser DSP',
+    clinicalApproach: ['Camperdown Prolonged Speech', 'Gentle Voicing Onset', 'Desensitization Hierarchy'],
+    languages: ['English', 'Spanish'],
+    insuranceAccepted: ['Aetna', 'BlueCross BlueShield', 'UnitedHealthcare', 'Out-of-Network Superbill']
   },
   {
     id: 'doc-2',
@@ -99,7 +104,12 @@ let doctors = [
     location: 'Chicago, IL (Telehealth Available)',
     acceptsInsurance: true,
     virtualAvailable: true,
-    inPersonAvailable: false
+    inPersonAvailable: false,
+    licenseNumber: 'ASHA CCC-SLP #837201 • IL Board #14209 (Active)',
+    telepracticeSecurity: 'HIPAA Telehealth Certified • Encrypted WebRTC',
+    clinicalApproach: ['Lidcombe Program', 'PCIT Interaction', 'Syllable-Timed Speech'],
+    languages: ['English', 'Russian'],
+    insuranceAccepted: ['Cigna', 'BlueCross BlueShield', 'Humana', 'FSA/HSA Eligible']
   },
   {
     id: 'doc-3',
@@ -118,7 +128,12 @@ let doctors = [
     location: 'Austin, TX (Telehealth Nationwide)',
     acceptsInsurance: false,
     virtualAvailable: true,
-    inPersonAvailable: true
+    inPersonAvailable: true,
+    licenseNumber: 'ASHA CCC-SLP #710924 • TX Board #29381 (Active)',
+    telepracticeSecurity: 'End-to-End Encrypted WebRTC • Strict PHI Isolation',
+    clinicalApproach: ['Neurogenic Fluency Protocol', 'Delayed Auditory Biofeedback', 'Pitch Contour Tracking'],
+    languages: ['English', 'Arabic'],
+    insuranceAccepted: ['Direct Patient Superbill', 'HSA / FSA Cards']
   },
   {
     id: 'doc-4',
@@ -137,7 +152,12 @@ let doctors = [
     location: 'New York, NY (Telehealth Available)',
     acceptsInsurance: true,
     virtualAvailable: true,
-    inPersonAvailable: true
+    inPersonAvailable: true,
+    licenseNumber: 'ASHA CCC-SLP #619842 • NY Board #55021 (Active)',
+    telepracticeSecurity: 'HIPAA & DPDP Compliant • Zero Audio Scraping Guarantee',
+    clinicalApproach: ['CBT Fluency Framework', 'Voluntary Stuttering Exposure', 'Van Riper Pull-Outs'],
+    languages: ['English'],
+    insuranceAccepted: ['Aetna', 'Oxford', 'UnitedHealthcare', 'Superbill Available']
   }
 ];
 

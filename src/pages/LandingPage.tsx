@@ -11,7 +11,8 @@ import {
   TrendingUp,
   CheckCircle2,
   Sparkles,
-  Award
+  Award,
+  Lock
 } from 'lucide-react';
 import { DisclaimerNotice } from '../components/common/DisclaimerNotice';
 
@@ -21,6 +22,14 @@ export const LandingPage: React.FC = () => {
   const handleStartPractice = () => {
     if (isAuthenticated) {
       setCurrentPage('dashboard');
+    } else {
+      setCurrentPage('login');
+    }
+  };
+
+  const handleFindTherapist = () => {
+    if (isAuthenticated) {
+      setCurrentPage('doctors');
     } else {
       setCurrentPage('login');
     }
@@ -55,11 +64,17 @@ export const LandingPage: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setCurrentPage('doctors')}
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 px-5 py-3 text-sm font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition-colors"
+            onClick={handleFindTherapist}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 px-5 py-3 text-sm font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition-colors shadow-2xs"
           >
             <Stethoscope className="w-4 h-4 text-teal-700 dark:text-teal-400" />
-            Find a Speech Therapist
+            <span>Find a Speech Therapist</span>
+            {!isAuthenticated && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-teal-800 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/80 px-2 py-0.5 rounded-md border border-teal-200/60 dark:border-teal-800/60 ml-1">
+                <Lock className="w-3 h-3 text-teal-600 dark:text-teal-400" />
+                Sign In
+              </span>
+            )}
           </button>
         </div>
 
@@ -102,16 +117,32 @@ export const LandingPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900 space-y-3">
-          <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 flex items-center justify-center">
-            <Stethoscope className="w-5 h-5" />
+        <div
+          onClick={handleFindTherapist}
+          className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900 space-y-3 cursor-pointer hover:border-teal-400 hover:shadow-md transition-all group flex flex-col justify-between"
+        >
+          <div>
+            <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <Stethoscope className="w-5 h-5" />
+            </div>
+            <div className="flex items-center justify-between mt-3">
+              <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                Licensed SLP Directory
+              </h3>
+              {!isAuthenticated && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700">
+                  <Lock className="w-2.5 h-2.5 text-slate-400" /> Protected
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mt-1">
+              Connect with certified Speech-Language Pathologists for 1-on-1 clinical assessments, personalized care plans, and regular check-ins.
+            </p>
           </div>
-          <h3 className="font-bold text-base text-slate-900 dark:text-white">
-            Licensed SLP Directory
-          </h3>
-          <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-            Connect with certified Speech-Language Pathologists for 1-on-1 clinical assessments, personalized care plans, and regular check-ins.
-          </p>
+          <div className="pt-2 flex items-center gap-1.5 text-xs font-bold text-teal-700 dark:text-teal-400 group-hover:translate-x-0.5 transition-transform">
+            <span>{isAuthenticated ? 'Browse Verified Therapists' : 'Sign In to Access Directory'}</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </div>
         </div>
       </div>
 

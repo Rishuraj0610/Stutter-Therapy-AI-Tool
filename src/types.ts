@@ -69,6 +69,11 @@ export interface Doctor {
   acceptsInsurance: boolean;
   virtualAvailable: boolean;
   inPersonAvailable: boolean;
+  licenseNumber?: string;
+  telepracticeSecurity?: string;
+  clinicalApproach?: string[];
+  languages?: string[];
+  insuranceAccepted?: string[];
 }
 
 export interface Appointment {

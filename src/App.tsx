@@ -144,18 +144,6 @@ const AppContent: React.FC = () => {
         isSidebarOpen={isSidebarOpen}
       />
 
-      {/* Persistent Clinical Notice */}
-      <div className="bg-gradient-to-r from-teal-900 via-slate-900 to-indigo-950 text-slate-200 border-b border-teal-800/40 px-4 py-1.5 text-[11px] sm:text-xs">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="inline-block w-2 h-2 rounded-full bg-teal-400 animate-pulse shrink-0" />
-            <span className="font-medium text-slate-300">
-              <strong className="text-teal-300">Clinical Notice:</strong> FluencyAI is a practice and support tool, not a medical device and not a replacement for a certified SLP.
-            </span>
-          </div>
-        </div>
-      </div>
-
       {/* Clinician Inactivity Warning Modal (HIPAA / DPDP Act 30-min auto logout) */}
       <ClinicianInactivityBanner />
 
