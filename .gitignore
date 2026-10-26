@@ -6,3 +6,8 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# AI Studio & Internal Artifacts / Temp Storage
+.aistudio/
+.tempmediaStorage/
+**/.tempmediaStorage/
